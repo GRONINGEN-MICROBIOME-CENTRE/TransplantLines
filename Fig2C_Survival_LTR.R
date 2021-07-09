@@ -1,6 +1,11 @@
-# ======================================================
+# ===================================================================
 # Mortality analysis (Liver Transplant Recipients [LTR], Figure 2/C)
-# ======================================================
+# ===================================================================
+# NOTE: This is implementation on Mock Data published in this github repo,
+#       and is intended for demonstration purposes only, the
+#       results are not identical to Figures in the manuscript
+# ===================================================================
+#
 # make sure following packages are installed:
 #install.packages(c('foreign','tidyverse','ggplot2',
 #                   'ggsignif','ggpubr','survival','rms','survminer'))
