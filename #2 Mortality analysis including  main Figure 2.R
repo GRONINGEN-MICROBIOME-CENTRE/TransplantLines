@@ -1,16 +1,16 @@
 #2.0      Mortality analysis and Figure 2----
 # ==========================================================================================
-# By: Weersma Group, TransplantLines (UMCG)
+#                       By: Weersma Group, TransplantLines (UMCG)
 #
-# UMCG Transplantlines Project data analysis
+#                       UMCG Transplantlines Project data analysis
 # ==========================================================================================
 #
 # Mortality analysis (Liver Transplant Recipients [LTR], Renal Transplant Recipients [RTR])
-#             This code produces Figure 2 in the main manuscript
+#                  This code produces Figure 2 in the main manuscript
 #
 # ==========================================================================================
 #
-#NOTE: This is implementation on Mock Data published in this github repo, and is intended 
+# NOTE: This is implementation on Mock Data published in this github repo, and is intended 
 # for demonstration purposes only, the results are not identical to Figures in the manuscript
 #
 # NOTE2: Codes are intended to be run from root of this github repo, if running them from 
@@ -20,7 +20,7 @@
 # ==========================================================================================
 #
 # make sure following packages are installed:
-#install.packages(c('foreign','tidyverse','ggsignif','survival','rms','survminer'))
+# install.packages(c('foreign','tidyverse','ggsignif','survival','rms','survminer'))
 #
 # ==========================================================================================
 
