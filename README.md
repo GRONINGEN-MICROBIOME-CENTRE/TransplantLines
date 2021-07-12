@@ -2,7 +2,8 @@
 TransplantLines project
 
 
-* Medication Analysis*
+
+***Medication Analysis***
 
 We tested 5 immunosuppressive drugs individually between users and non-users, correcting for surgery, age, sex, BMI, smoking, and the use of proton pump inhibitor (PPI), laxatives and antibiotics using linear models. 
 The microbial data contains the rclr-transformed relative abundances of species and pathways. 
