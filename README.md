@@ -30,7 +30,9 @@ The medication contains prednisolone; tacrolimus; mycophenolic acid; azathioprin
 
 The microbiome composition variance explained by phenotypes was calculated by permutational multivariate analysis of variance using distance matrices, implemented in the adonis function for R package vegan (v.2.4-6), using 9999 permutations and a Bray-Curtis distance matrix calculated using relative abundances of microbial species.
 
+***Log-ratio analysis of species post vs pre-transplantation***
 
+Using our longitudinal data, we constructed log-ratios comparing each microbial species’ rclr-transformed relative abundance at a time point post-transplantation to its rclr-transformed relative abundance at pre-transplantation. These log-ratios were constructed by subtracting each focal species’ average rclr-transformed relative abundances across all post transplantation samples from it’s averaged rclr-transformed relative abundances across all pre transplantation samples.
 
 
 
