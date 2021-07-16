@@ -1,6 +1,7 @@
 # TransplantLines
 
-# Comment from Johannes: I would for simplicity and clrearity only create an index of the files in this repo. Don't add a ton of text that can be read in the manuscript.
+# Comment from Johannes: I would for simplicity and clarity only create an index of the files in this repo. Don't add a ton of text that can be read in the manuscript.
+# Descripbe the mockdata, and which analyses that are re-created using mock data vs e.g. decoide sample loadings. In my mock_fig6 I re-create the ordination plots using the 'real' sample loadings produced from decoide, and use the mock data for the log-ratio and diff analysis (linear models) becuase this would require the rclr-transformed data (and as we are not uplodaing our abundance tables, we should probably not share the 'real' rclr tables either). 
 
 ***Microbiome profiling and description of microbiome***
 
