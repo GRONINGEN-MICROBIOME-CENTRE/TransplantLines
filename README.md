@@ -1,5 +1,6 @@
 # TransplantLines
-TransplantLines project
+
+# Comment from Johannes: I would for simplicity and clrearity only create an index of the files in this repo. Don't add a ton of text that can be read in the manuscript.
 
 ***Microbiome profiling and description of microbiome***
 
