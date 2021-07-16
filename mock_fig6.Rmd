@@ -28,7 +28,7 @@ metadata <- read.csv("~/TransplantLines/mockdata/Mock_Meta_Final.csv", row.names
 # FIGURE 6A 
 
 centroids_fig6A <- 
-  read.csv("~/Documents/UMGC/transplant_study/code_for_github/decoide_output/species/decoide_taxa_sample_loadings.csv", row.names=1) %>% 
+  read.csv("~/TransplantLines/decoide_output/species/decoide_taxa_sample_loadings.csv", row.names=1) %>% 
   rownames_to_column("ID") %>% 
   select(ID, PC1, PC2) %>% 
   filter(ID %in% metadata[metadata$Timepoint_All %in% c("Healthy Control","3M","6M","12M","24M","PreTxRTR","PreTxLTR"),]$ID) %>%
@@ -37,7 +37,7 @@ centroids_fig6A <-
   summarise(PC1_mean=mean(PC1), PC2_mean=mean(PC2))
 
 fig6A_a <- 
-    read.csv("~/Documents/UMGC/transplant_study/code_for_github/decoide_output/species/decoide_taxa_sample_loadings.csv", row.names=1) %>% 
+    read.csv("~/TransplantLines/decoide_output/species/decoide_taxa_sample_loadings.csv", row.names=1) %>% 
   rownames_to_column("ID") %>% 
   select(ID, PC1, PC2) %>% 
   filter(ID %in% metadata[metadata$Timepoint_All %in% c("3M","6M","12M","24M","PreTxRTR","PreTxLTR","Healthy Control"),]$ID) %>%
@@ -91,7 +91,7 @@ fig6A_a + fig6A_b + plot_layout(ncol=2)
 # FIGURE S7
 
 centroids_figS7 <- 
-  read.csv("~/Documents/UMGC/transplant_study/code_for_github/decoide_output/pathways/decoide_pwys_sample_loadings.csv", row.names=1) %>% 
+  read.csv("~/TransplantLines/decoide_output/pathways/decoide_pwys_sample_loadings.csv", row.names=1) %>% 
   rownames_to_column("ID") %>% 
   select(ID, PC1, PC2) %>% 
   filter(ID %in% metadata[metadata$Timepoint_All %in% c("Healthy Control","3M","6M","12M","24M","PreTxRTR","PreTxLTR"),]$ID) %>%
@@ -100,7 +100,7 @@ centroids_figS7 <-
   summarise(PC1_mean=mean(PC1), PC2_mean=mean(PC2))
 
 figS7_a <- 
-  read.csv("~/Documents/UMGC/transplant_study/code_for_github/decoide_output/pathways/decoide_pwys_sample_loadings.csv", row.names=1) %>% 
+  read.csv("~/TransplantLines/decoide_output/pathways/decoide_pwys_sample_loadings.csv", row.names=1) %>% 
   rownames_to_column("ID") %>% 
   select(ID, PC1, PC2) %>% 
   filter(ID %in% metadata[metadata$Timepoint_All %in% c("3M","6M","12M","24M","PreTxRTR","PreTxLTR","Healthy Control"),]$ID) %>%
@@ -157,7 +157,7 @@ figS7_a + figS7_b + plot_layout(ncol=2)
 # RCLR transformed abundance table from DECOIDE
 # Here we use the mock data
 ftbl_rclr <- 
-  read.csv("~/Documents/UMGC/transplant_study/code_for_github/mockdata/decoide_output/Mocks_Taxa_Filtered_rclr.csv", row.names=1)
+  read.csv("~/TransplantLines/mockdata/decoide_output/Mocks_Taxa_Filtered_rclr.csv", row.names=1)
 
 meta <- metadata %>%
   select(-ID) %>% 
@@ -289,7 +289,7 @@ bind_rows(log_ratio_self, .id="taxon_id") %>%
 # And metabolic pathways
 
 ftbl_rclr <- 
-  read.csv("~/Documents/UMGC/transplant_study/code_for_github/mockdata/decoide_output/Mocks_Pathways_Filtered_rclr.csv", row.names=1)
+  read.csv("~/TransplantLines/mockdata/decoide_output/Mocks_Pathways_Filtered_rclr.csv", row.names=1)
 
 meta <- metadata %>%
   select(-ID) %>% 
