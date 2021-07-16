@@ -16,7 +16,7 @@ Here we re-create Fig. 6A and S7 using the sample loadings produced by decoide.
 We also re-create Fig. 6C and 6D using mock data.
 
 ```{r}
-metadata <- read.csv("~/Documents/UMGC/transplant_study/code_for_github/mockdata/Mock_Meta_Final.csv", row.names=1) %>%
+metadata <- read.csv("~/TransplantLines/mockdata/Mock_Meta_Final.csv", row.names=1) %>%
   rownames_to_column("ID") %>% 
   mutate(mockID=paste0("MOCK_",ID)) %>% 
   filter(Timepoint_All %in% c("PreTxLTR_TxL","PreTxRTR_TxN","3months_TxN", "6months_TxN", "12months_TxN", "24months_TxN", "Healthy Control")) %>% 
