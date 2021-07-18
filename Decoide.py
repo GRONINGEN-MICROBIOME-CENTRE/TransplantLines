@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-## Stand-alone version of DECOIDE
+## Stand-alone version of DEICODE (https://github.com/biocore/DEICODE)
 
 from biom import load_table
 from deicode.rpca import rpca
