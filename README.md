@@ -3,12 +3,12 @@ By: Weersma Group, Fu Group and Zhernakova Group, UMCG, The Netherlands
 This github repo describes workflow and codes used in The TransplantLines study:
 
 Contents:
-* Microbiome profiling and description of microbiome
-* Mortality Analysis
-* Differential abundance analysis
-* Calculation of microbiome variance explained by phenotypes
-* Immunosuppresive medication analysis (Immunosuppresive medication analysis and Figure 5.Rmd)
-* Longitudinal analysis (Longitudinal analysis and Figure 6.Rmd)
+* Microbiome profiling and description of microbiome (Microbiome profiling and description of microbiome.Rmd)
+* Mortality Analysis (See Mortality Analysis.Rmd)
+* Differential abundance analysis (See Differential abundance analysis.Rmd)
+* Calculation of microbiome variance explained by phenotypes (See Calculation of microbiome variance explained by phenotypes.Rmd)
+* Immunosuppresive medication analysis (See Immunosuppresive medication analysis and Figure 5.Rmd)
+* Longitudinal analysis (See Longitudinal analysis and Figure 6.Rmd)
 
 ***Microbiome profiling and description of microbiome***
 
