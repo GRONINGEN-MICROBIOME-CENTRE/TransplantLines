@@ -197,6 +197,8 @@ names(log_ratio_self) <- colnames(ftbl_rclr)
 log_ratio_self <- lapply(log_ratio_self, function(x) data.frame(log_ratio=rep(NA,4),
                                                                 TimePoint=c("3M","6M","12M","24M")))
 
+# Here we construct 4 log-ratios per microbial species (see eq. 3 in manuscript). For each species and post-transplantation time point, the numerator consist of the focal species average rclr-transformed relative abundance at the focal post-transplant time point, and the denominator consist of the focal species average rclr-transformed relative abundance at the pre-transplantation (preTx) time point.
+
 for(taxon in colnames(ftbl_rclr)) {
   #print(taxon)
   for(v in c("3M","6M","12M","24M")) {
