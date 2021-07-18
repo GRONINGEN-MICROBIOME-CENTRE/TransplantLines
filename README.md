@@ -3,7 +3,7 @@ By: Weersma Group, Fu Group and Zhernakova Group, UMCG, The Netherlands
 This github repo describes workflow and codes used in The TransplantLines study:
 
 Contents:
-*Microbiome profiling
+Markup : *Microbiome profiling
 *Heritability analysis
 Identification of core and keystone microbes
 Microbiome clustering
