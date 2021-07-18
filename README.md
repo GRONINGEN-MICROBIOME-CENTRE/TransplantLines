@@ -3,7 +3,7 @@ By: Weersma Group, Fu Group and Zhernakova Group, UMCG, The Netherlands
 This github repo describes workflow and codes used in The TransplantLines study:
 
 Contents:
-* Microbiome profiling and description of microbiome (Microbiome profiling and description of microbiome.Rmd)
+* Microbiome profiling and description of microbiome
 * Mortality Analysis (See Mortality Analysis.Rmd)
 * Differential abundance analysis (See Differential abundance analysis.Rmd)
 * Calculation of microbiome variance explained by phenotypes (See Calculation of microbiome variance explained by phenotypes.Rmd)
