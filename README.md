@@ -3,8 +3,8 @@ By: Weersma Group, Fu Group and Zhernakova Group, UMCG, The Netherlands
 This github repo describes workflow and codes used in The TransplantLines study:
 
 Contents:
-Microbiome profiling
-Heritability analysis
+*Microbiome profiling
+*Heritability analysis
 Identification of core and keystone microbes
 Microbiome clustering
 Calculation of microbiome variance explained by phenotypes
@@ -47,6 +47,6 @@ We tested five immunosuppressive drugs individually between users and non-users,
 The microbial data contains the rclr-transformed relative abundances of species and pathways. 
 The medication contains prednisolone; tacrolimus; mycophenolic acid; azathioprine; and cyclosporin, and five drugs in combination includes cyclosporin and prednisolone; mycophenolic acid, tacrolimus and prednisolone; mycophenolic acid and tacrolimus; tacrolimus and prednisolone; mycophenolic acid and prednisolone.
 
-***Log-ratio analysis of species post vs pre-transplantation***
+***Longitudinal analysis***
 
 Using our longitudinal data, we constructed log-ratios comparing each microbial species’ rclr-transformed relative abundance at a time point post-transplantation to its rclr-transformed relative abundance at pre-transplantation. These log-ratios were constructed by subtracting each focal species’ average rclr-transformed relative abundances across all post transplantation samples from it’s averaged rclr-transformed relative abundances across all pre transplantation samples.
