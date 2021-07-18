@@ -12,6 +12,10 @@ Contents:
 
 * DEICODE.py: Python script to run the stand-alone version of DEICODE (https://github.com/biocore/DEICODE)
 
+*** Mock data ***
+
+RANKO, PLEASE ADD SOME LINES ON HOW THE MOCK DATA WAS GENERATED AND WHY WE DON'T SHARE OUR DATA 
+
 ***Microbiome profiling and description of microbiome***
 
 Illumina adapters and low-quality reads (Phred score <30) were filtered out using KneadData (v0.5.1). Then Bowtie2 (v2.3.4.1) was used to remove reads aligned to the human genome (hg19). The quality of the reads was examined using FastQC toolkit (v0.11.7). Taxonomy alignment was done by MetaPhlAn2 (v2.7.2) against the database of marker genes mpa_v20_m200. Metacyc pathways were profiled by HUMAnN2 (v0.11.1). Bacterial virulence factors and antibiotic resistance genes were identified using shortBRED (shortbred_identify.py (v0.9.5) and shortbred_quantify.py tool (v0.9.5)) against virulence factors of pathogenic bacteria (VFDB) database (http://www.mgc.ac.cn/VFs/main.htm) and comprehensive antibiotic resistance database (CARD) (https://card.mcmaster.ca/) separately. Samples were further excluded by criteria that eukaryotic or viral abundance > 25% of total microbiome content or total read depth < 10 million. In total, we identified 1132 taxa (17 phyla, 27 class, 52 order, 98 family, 231 genera and 705 species), 586 metabolic pathways, 313 virulence factors and 957 antibiotic resistance genes. With a presence of 10% and relative abundance threshold of 0.01%, 384 taxa (8 phyla, 14 class, 20 order, 40 family, 83 genera and 219 species), 351 metabolic pathways, 323 virulence factors and 167 antibiotic resistance genes were left after filtering. Total-sum normalization was applied to all microbiome data after filtering. Analyses were performed using locally installed tools and databases on CentOS (release 6.9) on the high-performance computing infrastructure available at UMCG and University of Groningen (RUG).
