@@ -3,19 +3,12 @@ By: Weersma Group, Fu Group and Zhernakova Group, UMCG, The Netherlands
 This github repo describes workflow and codes used in The TransplantLines study:
 
 Contents:
-Markup : *Microbiome profiling
-*Heritability analysis
-Identification of core and keystone microbes
-Microbiome clustering
-Calculation of microbiome variance explained by phenotypes
-Microbiome-phenotypes association analyses
-Calculation of microbiome signatures predictive of diseases and health
-Calculation of General Microbiome Health Index (GMHI)
-Miscellaneous scripts
-Supporting R scripts
-Supporting data
-Installation instructions
-Code use instructions
+* Microbiome profiling and description of microbiome
+* Mortality Analysis
+* Differential abundance analysis
+* Calculation of microbiome variance explained by phenotypes
+* Immunosuppresive medication analysis
+* Longitudinal analysis
 
 ***Microbiome profiling and description of microbiome***
 
