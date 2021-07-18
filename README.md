@@ -12,7 +12,7 @@ Contents:
 
 * DEICODE.py: Python script to run the stand-alone version of DEICODE (https://github.com/biocore/DEICODE)
 
-*** Mock data ***
+***Mock data***
 
 RANKO, PLEASE ADD SOME LINES ON HOW THE MOCK DATA WAS GENERATED AND WHY WE DON'T SHARE OUR DATA 
 
