@@ -7,7 +7,7 @@ Contents:
 * Mortality Analysis
 * Differential abundance analysis
 * Calculation of microbiome variance explained by phenotypes
-* Immunosuppresive medication analysis
+* Immunosuppresive medication analysis (Immunosuppresive medication analysis and Figure 5.Rmd)
 * Longitudinal analysis (Longitudinal analysis and Figure 6.Rmd)
 
 ***Microbiome profiling and description of microbiome***
