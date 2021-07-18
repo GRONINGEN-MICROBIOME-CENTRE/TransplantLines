@@ -1,8 +1,4 @@
 # TransplantLines
-
-# Comment from Johannes: I would for simplicity and clarity only create an index of the files in this repo. Don't add a ton of text that can be read in the manuscript.
-# Descripbe the mockdata, and which analyses that are re-created using mock data vs e.g. decoide sample loadings. In my mock_fig6 I re-create the ordination plots using the 'real' sample loadings produced from decoide, and use the mock data for the log-ratio and diff analysis (linear models) becuase this would require the rclr-transformed data (and as we are not uplodaing our abundance tables, we should probably not share the 'real' rclr tables either). 
-
 ***Microbiome profiling and description of microbiome***
 
 Illumina adapters and low-quality reads (Phred score <30) were filtered out using KneadData (v0.5.1). Then Bowtie2 (v2.3.4.1) was used to remove reads aligned to the human genome (hg19). The quality of the reads was examined using FastQC toolkit (v0.11.7). Taxonomy alignment was done by MetaPhlAn2 (v2.7.2) against the database of marker genes mpa_v20_m200. Metacyc pathways were profiled by HUMAnN2 (v0.11.1). Bacterial virulence factors and antibiotic resistance genes were identified using shortBRED (shortbred_identify.py (v0.9.5) and shortbred_quantify.py tool (v0.9.5)) against virulence factors of pathogenic bacteria (VFDB) database (http://www.mgc.ac.cn/VFs/main.htm) and comprehensive antibiotic resistance database (CARD) (https://card.mcmaster.ca/) separately. Samples were further excluded by criteria that eukaryotic or viral abundance > 25% of total microbiome content or total read depth < 10 million. In total, we identified 1132 taxa (17 phyla, 27 class, 52 order, 98 family, 231 genera and 705 species), 586 metabolic pathways, 313 virulence factors and 957 antibiotic resistance genes. With a presence of 10% and relative abundance threshold of 0.01%, 384 taxa (8 phyla, 14 class, 20 order, 40 family, 83 genera and 219 species), 351 metabolic pathways, 323 virulence factors and 167 antibiotic resistance genes were left after filtering. Total-sum normalization was applied to all microbiome data after filtering. Analyses were performed using locally installed tools and databases on CentOS (release 6.9) on the high-performance computing infrastructure available at UMCG and University of Groningen (RUG).
@@ -23,27 +19,16 @@ Antibiotic resistance genes and virulence factors were extremely sparse in healt
 
 Feature ~ Cross_sectional_samples + Age  +  BMI + Gender  + Smoking + PPI + Laxatives  + Antitibiotics
 
-We tested five immunosuppressive drugs individually between users and non-users, correcting for surgery, age, sex, BMI, smoking, and the use of proton pump inhibitor (PPI), laxatives and antibiotics using linear models. 
-The microbial data contains the rclr-transformed relative abundances of species and pathways. 
-The medication contains prednisolone; tacrolimus; mycophenolic acid; azathioprine; and cyclosporin, and five drugs in combination includes cyclosporin and prednisolone; mycophenolic acid, tacrolimus and prednisolone; mycophenolic acid and tacrolimus; tacrolimus and prednisolone; mycophenolic acid and prednisolone.
-
-
 ***Calculation of microbiome variance explained by phenotypes***
 
 The microbiome composition variance explained by phenotypes was calculated by permutational multivariate analysis of variance using distance matrices, implemented in the adonis function for R package vegan (v.2.4-6), using 9999 permutations and a Bray-Curtis distance matrix calculated using relative abundances of microbial species.
 
+***Immunosuppresive medication analysis***
+
+We tested five immunosuppressive drugs individually between users and non-users, correcting for surgery, age, sex, BMI, smoking, and the use of proton pump inhibitor (PPI), laxatives and antibiotics using linear models. 
+The microbial data contains the rclr-transformed relative abundances of species and pathways. 
+The medication contains prednisolone; tacrolimus; mycophenolic acid; azathioprine; and cyclosporin, and five drugs in combination includes cyclosporin and prednisolone; mycophenolic acid, tacrolimus and prednisolone; mycophenolic acid and tacrolimus; tacrolimus and prednisolone; mycophenolic acid and prednisolone.
+
 ***Log-ratio analysis of species post vs pre-transplantation***
 
 Using our longitudinal data, we constructed log-ratios comparing each microbial species’ rclr-transformed relative abundance at a time point post-transplantation to its rclr-transformed relative abundance at pre-transplantation. These log-ratios were constructed by subtracting each focal species’ average rclr-transformed relative abundances across all post transplantation samples from it’s averaged rclr-transformed relative abundances across all pre transplantation samples.
-
-
-
-
-
-
-
-
-
-
-
-
