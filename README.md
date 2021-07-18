@@ -8,7 +8,7 @@ Contents:
 * Differential abundance analysis
 * Calculation of microbiome variance explained by phenotypes
 * Immunosuppresive medication analysis
-* Longitudinal analysis
+* Longitudinal analysis (Longitudinal analysis and Figure 6.Rmd)
 
 ***Microbiome profiling and description of microbiome***
 
