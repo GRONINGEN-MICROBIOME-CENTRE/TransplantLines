@@ -4,6 +4,7 @@ By: Weersma Group, Fu Group and Zhernakova Group, UMCG, The Netherlands
 
 Last updated XX-XX-XX
 
+----------------------------------------------------------------------------------------------------------------------
 **File index:**
 * mortality.Rmd: R code to reproduce the mortality analysis (Fig. 2C-2H) 
 * differenctial_abundance.Rmd: R code to reproduce the differential abundance analysis (Tables S1-S3)
@@ -14,7 +15,6 @@ Last updated XX-XX-XX
 * GraPhlAn.py: Python code to run GraPhlAn (https://github.com/biobakery/graphlan) 
 
 ----------------------------------------------------------------------------------------------------------------------
-
 **Dirs**
 * deicode_output: Sample and feature loadings (species and pathways) from DEICODE 
 * mock_data/deicode_input: Input files (abundance tables) to run DEICODE
