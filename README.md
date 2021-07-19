@@ -5,13 +5,13 @@ By: Weersma Group, Fu Group and Zhernakova Group, UMCG, The Netherlands
 Last updated XX-XX-XX
 
 **File index:**
-* Mortality Analysis.Rmd: 
-* Differential abundance analysis.Rmd
-* variance_explained_phenotypes.Rmd: Calculation of microbiome variance explained by phenotypes (Fig. 4)
-* Immunosuppresive medication analysis and Figure 5.Rmd
-* Longitudinal analysis and Figure 6.Rmd
-* DEICODE.py: Python script to run the stand-alone version of DEICODE (https://github.com/biocore/DEICODE)
-* GraPhlAn.py:
+* mortality.Rmd: R code to reproduce the mortality analysis (Fig. 2C-2H) 
+* differenctial_abundance.Rmd: R code to reproduce the differential abundance analysis (Tables S1-S3)
+* variance_explained_phenotypes.Rmd: R code to reproduce the PERMANOVA analysis (Fig. 4)
+* immunosuppresive_drugs.Rmd: R code to reproduce the immunosuppresive drugs analysis (Fig. 5)
+* longitudinal.Rmd: R code reproduce the longitudinal analysis (Fig. 6)
+* DEICODE.py: Python code to run the stand-alone version of DEICODE (https://github.com/biocore/DEICODE)
+* GraPhlAn.py: Python code to run GraPhlAn (https://github.com/biobakery/graphlan) 
  
 **Mock data**
 Due to p
