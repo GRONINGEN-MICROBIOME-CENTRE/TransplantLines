@@ -108,7 +108,7 @@ fig6A_b <- data.frame(dist_to_hc=euclidean_distance_between_centroids[1,2:7]) %>
 fig6A_a + fig6A_b + plot_layout(ncol=2)
 ```
 
-```{r}
+```{r, echo=T, eval=T, message=FALSE, warning=FALSE}
 # FIGURE S7
 
 centroids_figS7 <- 
@@ -172,7 +172,7 @@ figS7_a + figS7_b + plot_layout(ncol=2)
 ```
 
 
-```{r}
+```{r, echo=T, eval=T, message=FALSE, warning=FALSE}
 # FIGURE 6C
 
 # RCLR transformed abundance table from DEICODE
@@ -303,7 +303,7 @@ bind_rows(log_ratio_self, .id="taxon_id") %>%
 # However, in the manuscript, we plotted taxa deemed significantly deferentially abundant using linear models after treating patientid as a random effect. Below we show how these models were constructed using mock data. 
 ```  
 
-```{r}
+```{r, echo=T, eval=T, message=FALSE, warning=FALSE}
 ## Differential abundance analysis using mixed linear models
 # These models test which metabolic pathways/taxa are significantly deferentially abundant in post-transplantation timepoints as compared to pre-transplantation
 
