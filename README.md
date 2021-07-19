@@ -1,4 +1,4 @@
-This github repository provides the code to reproduce the analyses presented in "Gut Microbiome Dysbiosis is Associated with Increased Mortality following Solid Organ Transplantation"
+This github repository provides the code to reproduce the analyses presented in "**Gut Microbiome Dysbiosis is Associated with Increased Mortality following Solid Organ Transplantation**"
 
 By: Weersma Group, Fu Group and Zhernakova Group, UMCG, The Netherlands
 
