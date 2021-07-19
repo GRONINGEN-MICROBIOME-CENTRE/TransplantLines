@@ -1,7 +1,7 @@
 ---
 title: "Differential abundance analysis"
 author: Cas Swarte
-output: html_document
+output: html_notebook
 # ==========================================================================================
 #                       By: Weersma Group, TransplantLines (UMCG)
 #
