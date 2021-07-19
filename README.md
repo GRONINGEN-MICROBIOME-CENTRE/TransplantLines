@@ -13,11 +13,14 @@ Last updated XX-XX-XX
 * DEICODE.py: Python code to run the stand-alone version of DEICODE (https://github.com/biocore/DEICODE)
 * GraPhlAn.py: Python code to run GraPhlAn (https://github.com/biobakery/graphlan) 
 
+----------------------------------------------------------------------------------------------------------------------
+
 **Dirs**
 * deicode_output: Sample and feature loadings (species and pathways) from DEICODE 
 * mock_data/deicode_input: Input files (abundance tables) to run DEICODE
 * mock_data/deicode_output: Output files (sample/feature loadings and rclr-transformed abundance tables) from DEICODE
 
+----------------------------------------------------------------------------------------------------------------------
 **Mock data**
 Due to privicay constraints blablabla
 
