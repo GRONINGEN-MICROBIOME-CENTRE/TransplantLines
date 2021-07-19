@@ -16,8 +16,8 @@ Last updated XX-XX-XX
 
 ----------------------------------------------------------------------------------------------------------------------
 **Dirs**
-* deicode_output: Sample and feature loadings (species and pathways) from DEICODE 
-* mock_data/deicode_input: Input files (abundance tables) to run DEICODE
+* deicode_output: Sample and feature loadings for species and pathways produced by DEICODE 
+* mock_data/deicode_input: Input files (mock abundance tables) to run DEICODE
 * mock_data/deicode_output: Output files (sample/feature loadings and rclr-transformed abundance tables) from DEICODE
 
 ----------------------------------------------------------------------------------------------------------------------
