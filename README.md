@@ -1,5 +1,9 @@
 This github repository provides the code to reproduce the analyses presented in "Gut Microbiome Dysbiosis is Associated with Increased Mortality following Solid Organ Transplantation"
 
+By: Weersma Group, Fu Group and Zhernakova Group, UMCG, The Netherlands
+
+Last updated XX-XX-XX
+
 **File index:**
 * Mortality Analysis.Rmd
 * Differential abundance analysis.Rmd
@@ -14,4 +18,3 @@ Due to p
 RANKO, PLEASE ADD SOME LINES ON HOW THE MOCK DATA WAS GENERATED AND WHY WE DON'T SHARE OUR DATA 
 
 
-By: Weersma Group, Fu Group and Zhernakova Group, UMCG, The Netherlands
