@@ -22,7 +22,7 @@ Last updated 19-07-2021
 
 ----------------------------------------------------------------------------------------------------------------------
 **Mock data**
-Due to privicay constraints blablabla
+Due to privicay constraints .......
 
 RANKO, PLEASE ADD SOME LINES ON HOW THE MOCK DATA WAS GENERATED AND WHY WE DON'T SHARE OUR DATA 
 
