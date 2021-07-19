@@ -1,5 +1,5 @@
 ---
-title: 'Mortality analysis including  main Figure 2'
+title: 'Mortality analysis including main Figure 2'
 author: Cas Swarte
 output: html_document
 # ==========================================================================================
