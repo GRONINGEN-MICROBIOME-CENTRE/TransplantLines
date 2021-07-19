@@ -15,13 +15,13 @@ Last updated 19-07-2021
 * GraPhlAn.py: Python code to run GraPhlAn (https://github.com/biobakery/graphlan) 
 
 ----------------------------------------------------------------------------------------------------------------------
-**Dirs**
+**Dirs:**
 * deicode_output: Sample and feature loadings for species and pathways produced by DEICODE 
 * mock_data/deicode_input: Input files (mock abundance tables) to run DEICODE
 * mock_data/deicode_output: Output files (sample/feature loadings and rclr-transformed abundance tables) from DEICODE
 
 ----------------------------------------------------------------------------------------------------------------------
-**Mock Data**
+**Mock Data:**
 
 As the participants' informed consent and privacy regulations for the Lifelines biobank and Transplantlines project (https://umcgresearch.org/en-GB/web/research/w/transplantlines) prevent public sharing of metadata, the majority of analyses in this repository have been implemented with *mock data*. These data include a selection of anonymized and modified phenotypes including microbiome features. Becuase of this, the majority of code will not produce identical results as in the focal manuscript. Exceptions include the robust compositional PCA plots (Figs. 2A; 6A and S7) where we have shared the sample and feature loadings (for species and pathways) produced by DEICODE.     
 
