@@ -7,7 +7,7 @@ Last updated XX-XX-XX
 **File index:**
 * Mortality Analysis.Rmd: 
 * Differential abundance analysis.Rmd
-* Calculation of microbiome variance explained by phenotypes.Rmd
+* variance_explained_phenotypes.Rmd: Calculation of microbiome variance explained by phenotypes (Fig. 4)
 * Immunosuppresive medication analysis and Figure 5.Rmd
 * Longitudinal analysis and Figure 6.Rmd
 * DEICODE.py: Python script to run the stand-alone version of DEICODE (https://github.com/biocore/DEICODE)
