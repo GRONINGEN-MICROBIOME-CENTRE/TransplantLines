@@ -2,11 +2,32 @@
 title: "Figure 6 in Gut Microbiome Dysbiosis is Associated with Increased Mortality following Solid Organ Transplantation"
 author: Johannes Björk
 output: html_notebook
+
+# ==========================================================================================
+#                       By: Weersma Group, TransplantLines (UMCG)
+#
+#                       UMCG Transplantlines Project data analysis
+# ==========================================================================================
+#                                   Longitudinal analyses 
+#
+#                       Code to reproduce analyses displayed in Fig. 6
+#
+# ==========================================================================================
+#
+# NOTE: Codes are intended to be run from root of this github repo, if running them from 
+# different location, make sure to adjust setwd to appropriate location 
+# (root of this github repo)
+#
+# ==========================================================================================
+#
+#                   make sure following packages are installed:
+#             install.packages(c('tidyverse','ggpubr','patchwork','ggrepel'))
+#
+# ==========================================================================================
 ---
 
 ```{r, echo=T, eval=T, message=FALSE, warning=FALSE}
 library(tidyverse)
-library(foreign)
 library(ggpubr)
 library(patchwork)
 library(ggrepel)
