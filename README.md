@@ -21,9 +21,6 @@ Last updated 19-07-2021
 * mock_data/deicode_output: Output files (sample/feature loadings and rclr-transformed abundance tables) from DEICODE
 
 ----------------------------------------------------------------------------------------------------------------------
-**Mock data**
-Due to privicay constraints .......
+**Mock Data**
 
-RANKO, PLEASE ADD SOME LINES ON HOW THE MOCK DATA WAS GENERATED AND WHY WE DON'T SHARE OUR DATA 
-
-
+As the participants' informed consent and privacy regulations for the Lifelines biobank and Transplantlines project (https://umcgresearch.org/en-GB/web/research/w/transplantlines) prevent public sharing of metadata, analysis codes on this repo have been implemented on *mock data*. These data include a selection of anonymized and modified phenotypes and microbiome features and are distributed in *mock_data* folder. Please note that analysis codes will not reproduce the Transplantlines manuscript results when used with *mock data*. 
