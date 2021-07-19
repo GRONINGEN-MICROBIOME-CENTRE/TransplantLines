@@ -1,0 +1,368 @@
+---
+title: "Figure 6 in Gut Microbiome Dysbiosis is Associated with Increased Mortality following Solid Organ Transplantation"
+author: Johannes Björk
+output: html_notebook
+
+# ==========================================================================================
+#                       By: Weersma Group, TransplantLines (UMCG)
+#
+#                       UMCG Transplantlines Project data analysis
+# ==========================================================================================
+#                                   Longitudinal analyses 
+#
+#                       Code to reproduce analyses displayed in Fig. 6
+#
+# ==========================================================================================
+#
+# NOTE: Codes are intended to be run from root of this github repo, if running them from 
+# different location, make sure to adjust setwd to appropriate location 
+# (root of this github repo)
+#
+# ==========================================================================================
+#
+#                   make sure following packages are installed:
+#             install.packages(c('tidyverse','ggpubr','patchwork','ggrepel'))
+#
+# ==========================================================================================
+---
+
+```{r, echo=T, eval=T, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(ggpubr)
+library(patchwork)
+library(ggrepel)
+```
+
+Here we re-create Fig. 6A and S7 using the sample loadings produced by DEICODE. 
+We also re-create Fig. 6C and 6D using mock data.
+
+```{r}
+metadata <- read.csv("~/TransplantLines/mockdata/Mock_Meta_Final.csv", row.names=1) %>%
+  rownames_to_column("ID") %>% 
+  mutate(mockID=paste0("MOCK_",ID)) %>% 
+  filter(Timepoint_All %in% c("PreTxLTR_TxL","PreTxRTR_TxN","3months_TxN", "6months_TxN", "12months_TxN", "24months_TxN", "Healthy Control")) %>% 
+  mutate(Timepoint_All=recode_factor(Timepoint_All,"PreTxLTR_TxL"="PreTxLTR","PreTxRTR_TxN"="PreTxRTR","3months_TxN"="3M","6months_TxN"="6M","12months_TxN"="12M","24months_TxN"="24M"),
+         Timepoint_All=factor(Timepoint_All, levels=c("Healthy Control","3M","6M","12M","24M","PreTxRTR","PreTxLTR")))
+```
+
+```{r}
+# FIGURE 6A 
+
+centroids_fig6A <- 
+  read.csv("~/TransplantLines/deicode_output/species/deicode_taxa_sample_loadings.csv", row.names=1) %>% 
+  rownames_to_column("ID") %>% 
+  select(ID, PC1, PC2) %>% 
+  filter(ID %in% metadata[metadata$Timepoint_All %in% c("Healthy Control","3M","6M","12M","24M","PreTxRTR","PreTxLTR"),]$ID) %>%
+  left_join(select(metadata, ID, Timepoint_All), by="ID") %>%
+  group_by(Timepoint_All) %>% 
+  summarise(PC1_mean=mean(PC1), PC2_mean=mean(PC2))
+
+fig6A_a <- 
+    read.csv("~/TransplantLines/deicode_output/species/deicode_taxa_sample_loadings.csv", row.names=1) %>% 
+  rownames_to_column("ID") %>% 
+  select(ID, PC1, PC2) %>% 
+  filter(ID %in% metadata[metadata$Timepoint_All %in% c("3M","6M","12M","24M","PreTxRTR","PreTxLTR","Healthy Control"),]$ID) %>%
+  left_join(select(metadata, ID, Timepoint_All), by="ID") %>%
+  mutate(Timepoint_All=factor(Timepoint_All, levels=c("3M","6M","12M","24M","PreTxRTR","PreTxLTR","Healthy Control"))) %>% 
+  ggplot(aes(x=PC1, y=PC2, color=Timepoint_All)) +
+  geom_point(shape=19, size=3, alpha=0.5) +
+  scale_color_manual(values=setNames(c(RColorBrewer::brewer.pal(name="Blues", n=4),"red","darkorange","lightgray"),c("3M","6M","12M","24M","PreTxRTR","PreTxLTR","Healthy Control"))) + 
+  theme(legend.position="none",
+        panel.grid.major=element_blank(), panel.grid.minor=element_blank(), 
+        panel.background=element_rect(fill="white"),
+        panel.border=element_rect(colour="black", fill=NA, size=1),
+        axis.ticks.length=unit(0.25,"cm"), 
+        axis.text=element_text(size=12, color="black"),
+        axis.title=element_text(size=15, color="black")) +
+  geom_point(data=centroids_fig6A, aes(PC1_mean, PC2_mean, fill=Timepoint_All), shape=21, size=6, color="black") +
+  scale_fill_manual(values=setNames(c(RColorBrewer::brewer.pal(name="Blues", n=4),"red","orange","lightgray"),c("3M","6M","12M","24M","PreTxRTR","PreTxLTR","Healthy Control")))
+
+# Compute Euclidean distance between group centroids in 2D space (i.e. using PC1 and PC2)
+euclidean_distance_between_centroids <- as.matrix(dist(centroids_fig6A[,c("PC1_mean","PC2_mean")], method="euclidean"))
+rownames(euclidean_distance_between_centroids) <- colnames(euclidean_distance_between_centroids) <- c("Healthy Control","3M","6M","12M","24M","PreTxRTR","PreTxLTR")
+
+fig6A_b <- data.frame(dist_to_hc=euclidean_distance_between_centroids[1,2:7]) %>% 
+  rownames_to_column("group") %>% 
+  mutate(group=factor(group, levels=c("3M","6M","12M","24M","PreTxRTR","PreTxLTR"),labels=c("3 M","6 M","12 M","24 M","Pre-Tx Renal","Pre-Tx Liver"))) %>% 
+  mutate(dist_to_hc_norm=dist_to_hc/max(dist_to_hc),
+         X=1) %>% 
+  ggplot(aes(y=dist_to_hc_norm, x=X)) +
+  coord_flip() +
+  geom_vline(xintercept=1) +
+  geom_point(size=8, aes(color=group)) +
+  theme(legend.position="none",
+        panel.grid.major=element_blank(), 
+        panel.grid.minor=element_blank(), 
+        panel.background=element_rect(fill="white"),
+        panel.border=element_rect(colour="black", fill=NA, size=1),
+        axis.ticks.length=unit(0.25,"cm"),
+        axis.ticks.y=element_blank(),
+        axis.text=element_text(size=12, color="black"),
+        axis.title=element_text(size=14, color="black"),
+        axis.text.y=element_blank()) +
+  labs(x=NULL, y="Average Aitchison distance to healthy control") +
+  scale_color_manual(values=setNames(c(RColorBrewer::brewer.pal(name="Blues", n=4),"red","darkorange"),c("3 M","6 M","12 M","24 M","Pre-Tx Renal","Pre-Tx Liver"))) +
+  geom_text(aes(label=group), color="black", angle=45, hjust=-0.15, vjust=-1) +
+  scale_y_continuous(limits=c(0,1), breaks=seq(0,1,by=0.2), expand=c(.1,.1))
+
+fig6A_a + fig6A_b + plot_layout(ncol=2)
+```
+
+```{r, echo=T, eval=T, message=FALSE, warning=FALSE}
+# FIGURE S7
+
+centroids_figS7 <- 
+  read.csv("~/TransplantLines/deicode_output/pathways/deicode_pwys_sample_loadings.csv", row.names=1) %>% 
+  rownames_to_column("ID") %>% 
+  select(ID, PC1, PC2) %>% 
+  filter(ID %in% metadata[metadata$Timepoint_All %in% c("Healthy Control","3M","6M","12M","24M","PreTxRTR","PreTxLTR"),]$ID) %>%
+  left_join(select(metadata, ID, Timepoint_All), by="ID") %>%
+  group_by(Timepoint_All) %>% 
+  summarise(PC1_mean=mean(PC1), PC2_mean=mean(PC2))
+
+figS7_a <- 
+  read.csv("~/TransplantLines/deicode_output/pathways/deicode_pwys_sample_loadings.csv", row.names=1) %>% 
+  rownames_to_column("ID") %>% 
+  select(ID, PC1, PC2) %>% 
+  filter(ID %in% metadata[metadata$Timepoint_All %in% c("3M","6M","12M","24M","PreTxRTR","PreTxLTR","Healthy Control"),]$ID) %>%
+  left_join(select(metadata, ID, Timepoint_All), by="ID") %>%
+  mutate(Timepoint_All=factor(Timepoint_All, levels=c("3M","6M","12M","24M","PreTxRTR","PreTxLTR","Healthy Control"))) %>% 
+  ggplot(aes(x=PC1, y=PC2, color=Timepoint_All)) +
+  geom_point(shape=19, size=3, alpha=0.5) +
+  scale_color_manual(values=setNames(c(RColorBrewer::brewer.pal(name="Blues", n=4),"red","darkorange","lightgray"),c("3M","6M","12M","24M","PreTxRTR","PreTxLTR","Healthy Control"))) + 
+  theme(legend.position="none",
+        panel.grid.major=element_blank(), panel.grid.minor=element_blank(), 
+        panel.background=element_rect(fill="white"),
+        panel.border=element_rect(colour="black", fill=NA, size=1),
+        axis.ticks.length=unit(0.25,"cm"), 
+        axis.text=element_text(size=12, color="black"),
+        axis.title=element_text(size=15, color="black")) +
+  geom_point(data=centroids_figS7, aes(PC1_mean, PC2_mean, fill=Timepoint_All), shape=21, size=6, color="black") +
+  scale_fill_manual(values=setNames(c(RColorBrewer::brewer.pal(name="Blues", n=4),"red","orange","lightgray"),c("3M","6M","12M","24M","PreTxRTR","PreTxLTR","Healthy Control")))
+
+# Compute distance in 2D Euclidean space (i.e. along PC1 x PC2)
+euclidean_distance_between_centroids <- as.matrix(dist(centroids_figS7[,c("PC1_mean","PC2_mean")], method="euclidean"))
+rownames(euclidean_distance_between_centroids) <- colnames(euclidean_distance_between_centroids) <- c("Healthy Control","3M","6M","12M","24M","PreTxRTR","PreTxLTR")
+
+figS7_b <- data.frame(dist_to_hc=euclidean_distance_between_centroids[1,2:7]) %>% 
+  rownames_to_column("group") %>% 
+  mutate(group=factor(group, levels=c("3M","6M","12M","24M","PreTxRTR","PreTxLTR"),labels=c("3 M","6 M","12 M","24 M","Pre-Tx Renal","Pre-Tx Liver"))) %>% 
+  mutate(dist_to_hc_norm=dist_to_hc/max(dist_to_hc),
+         X=1) %>% 
+  ggplot(aes(y=dist_to_hc_norm, x=X)) +
+  coord_flip() +
+  geom_vline(xintercept=1) +
+  geom_point(size=8, aes(color=group)) +
+  theme(legend.position="none",
+        panel.grid.major=element_blank(), 
+        panel.grid.minor=element_blank(), 
+        panel.background=element_rect(fill="white"),
+        panel.border=element_rect(colour="black", fill=NA, size=1),
+        axis.ticks.length=unit(0.25,"cm"),
+        axis.ticks.y=element_blank(),
+        axis.text=element_text(size=12, color="black"),
+        axis.title=element_text(size=14, color="black"),
+        axis.text.y=element_blank()) +
+  labs(x=NULL, y="Average Aitchison distance to healthy control") +
+  scale_color_manual(values=setNames(c(RColorBrewer::brewer.pal(name="Blues", n=4),"red","darkorange"),c("3 M","6 M","12 M","24 M","Pre-Tx Renal","Pre-Tx Liver"))) +
+  geom_text(aes(label=group), color="black", angle=45, hjust=-0.15, vjust=-1) +
+  scale_y_continuous(limits=c(0,1), breaks=seq(0,1,by=0.2), expand=c(0.0,.1))
+
+figS7_a + figS7_b + plot_layout(ncol=2)
+```
+
+
+```{r, echo=T, eval=T, message=FALSE, warning=FALSE}
+# FIGURE 6C
+
+# RCLR transformed abundance table from DEICODE
+# Here we use the mock data
+ftbl_rclr <- 
+  read.csv("~/TransplantLines/mockdata/deicode_output/Mocks_Taxa_Filtered_rclr.csv", row.names=1)
+
+meta <- metadata %>%
+  select(-ID) %>% 
+  rename(`ID`=`mockID`) %>% 
+  filter(Timepoint_All %in% c("3M","6M","12M","24M","PreTxRTR")) 
+
+# Subset to renal longitudinal samples and exclude healthy controls
+ftbl_rclr <- ftbl_rclr[,colnames(ftbl_rclr) %in% meta$ID]
+ftbl_rclr <- t(ftbl_rclr)
+
+# Construct a data.frame (pairs) with two columns identical columns containing all species
+tmp_mat <- diag(length(colnames(ftbl_rclr)))
+rownames(tmp_mat) <- colnames(tmp_mat) <- colnames(ftbl_rclr)
+pairs <- reshape2::melt(tmp_mat) %>% 
+  filter(Var1==Var2) %>% 
+  select(numerator=Var1, denominator=Var2) %>% 
+  arrange(numerator, denominator) %>% 
+  mutate(numerator=as.character(numerator), denominator=as.character(denominator))
+
+# Make a nested list containing all samples and for each sample the data.frame (pairs) created above. We also add which timepoint the focal sample corresponds to
+pairs$TimePoint <- NA
+log_ratio_samples <- vector("list", nrow(ftbl_rclr))
+names(log_ratio_samples) <- rownames(ftbl_rclr)
+log_ratio_samples <- lapply(log_ratio_samples, function(x) pairs)
+
+for(sample in names(log_ratio_samples)) {
+  #print(sample)
+  for(pair in 1:nrow(log_ratio_samples[[sample]])) {
+    log_ratio_samples[[sample]][pair,]$TimePoint <- as.character(meta[meta$ID==sample,]$Timepoint_All)
+  }
+}
+
+pairs_across_samples <- bind_rows(log_ratio_samples, .id="ID")
+
+log_ratio_self <- vector("list", ncol(ftbl_rclr))
+names(log_ratio_self) <- colnames(ftbl_rclr)
+log_ratio_self <- lapply(log_ratio_self, function(x) data.frame(log_ratio=rep(NA,4),
+                                                                TimePoint=c("3M","6M","12M","24M")))
+
+# Here we construct 4 log-ratios per microbial species (see eq. 3 in manuscript). For each species and post-transplantation time point, the numerator consist of the focal species average rclr-transformed relative abundance at the focal post-transplant time point, and the denominator consist of the focal species average rclr-transformed relative abundance at the pre-transplantation (preTx) time point.
+
+for(taxon in colnames(ftbl_rclr)) {
+  #print(taxon)
+  for(v in c("3M","6M","12M","24M")) {
+    log_ratio_self[[taxon]][log_ratio_self[[taxon]]$TimePoint==v,]$log_ratio <- mean(ftbl_rclr[pairs_across_samples[pairs_across_samples$numerator==taxon & pairs_across_samples$TimePoint==v,]$ID, taxon], na.rm=T) - mean(ftbl_rclr[pairs_across_samples[pairs_across_samples$numerator==taxon & pairs_across_samples$TimePoint=="PreTxRTR",]$ID, taxon], na.rm=T)
+  }
+}
+
+# Plot the results
+bind_rows(log_ratio_self, .id="taxon_id") %>%
+  filter(!TimePoint %in% "PreTxRTR") %>% 
+  mutate(TimePoint=fct_relevel(TimePoint, c("3M","6M","12M","24M")),
+         timepoint=as.numeric(TimePoint)) %>%
+  group_by(taxon_id) %>% 
+  mutate(majority_sign=median(sign(log_ratio), na.rm=T),
+         majority_sign2=recode_factor(majority_sign, `1`="pos",`-1`="neg", `0`="zero"),
+         taxon_id=fct_reorder(taxon_id, majority_sign, median),
+         taxon_id_24M=case_when(TimePoint=="24M" ~ taxon_id)) %>%
+  ungroup() %>% 
+  ggplot(aes(x=timepoint, y=log_ratio, group=taxon_id, color=majority_sign2, label=taxon_id_24M)) + 
+  scale_color_manual(values=c("pos"="#4292c6","neg"="#ef3b2c", "zero"="gray")) +
+  geom_point() + 
+  geom_line() +
+  # geom_label_repel(hjust=-1,
+  #                  vjust=0,
+  #                  nudge_x=2,
+  #                  direction="y",
+  #                  segment.size=0.2,
+  #                  size=4) +
+  labs(y="Log fold change", x="Time since transplantation") +
+  geom_segment(aes(x=1,xend=4,y=0,yend=0), linetype="dashed", color="black") +
+  labs(title="Log ( Timepoint / PreTx)") +
+  theme(legend.position="none",
+        plot.title=element_text(size=10),
+        panel.grid.major=element_blank(), 
+        panel.grid.minor=element_blank(), 
+        panel.background=element_rect(fill="white"),
+        panel.border=element_rect(colour="black", fill=NA, size=1),
+        axis.text=element_text(color="black", size=12),
+        axis.title=element_text(color="black", size=15),
+        plot.margin=unit(c(0,0,0,0), "in")) +
+  scale_x_continuous(expand=c(0.05, 0, 0, 1), breaks=seq(from=1, to=4, by=1), labels=c("3M","6M","12M","24M"))
+  
+# Here we filter taxa based on absolute log fold change (>0.5) also only keeping taxa with 4 time points
+bind_rows(log_ratio_self, .id="taxon_id") %>%
+  filter(!TimePoint %in% "PreTxRTR") %>% 
+  mutate(TimePoint=fct_relevel(TimePoint, c("3M","6M","12M","24M")),
+         timepoint=as.numeric(TimePoint)) %>%
+  group_by(taxon_id) %>% 
+  mutate(majority_sign=median(sign(log_ratio), na.rm=T),
+         majority_sign2=recode_factor(majority_sign, `1`="pos",`-1`="neg", `0`="zero"),
+         taxon_id=fct_reorder(taxon_id, majority_sign, median),
+         taxon_id_24M=case_when(TimePoint=="24M" ~ taxon_id),
+         median_abs_lr=median(abs(log_ratio))) %>% 
+  ungroup() %>% 
+  filter(majority_sign2 %in% c("neg","pos"),
+         median_abs_lr>=0.5) %>% 
+  ggplot(aes(x=timepoint, y=log_ratio, group=taxon_id, color=majority_sign2, label=taxon_id_24M)) + 
+  scale_color_manual(values=c("pos"="#4292c6","neg"="#ef3b2c")) +
+  geom_point() + 
+  geom_line() +
+  # geom_label_repel(hjust=-1,
+  #                  vjust=0,
+  #                  nudge_x=2,
+  #                  direction="y",
+  #                  segment.size=0.2,
+  #                  size=4) +
+  labs(y="Log fold change", x="Time since transplantation") +
+  geom_segment(aes(x=1,xend=4,y=0,yend=0), linetype="dashed", color="black") +
+  labs(title="Log ( Timepoint / PreTx)") +
+  theme(legend.position="none",
+        plot.title=element_text(size=10),
+        panel.grid.major=element_blank(), 
+        panel.grid.minor=element_blank(), 
+        panel.background=element_rect(fill="white"),
+        panel.border=element_rect(colour="black", fill=NA, size=1),
+        axis.text=element_text(color="black", size=12),
+        axis.title=element_text(color="black", size=15),
+        plot.margin=unit(c(0,0,0,0), "in")) +
+  scale_x_continuous(expand=c(0.05, 0, 0, 1), breaks=seq(from=1, to=4, by=1), labels=c("3M","6M","12M","24M"))
+
+# However, in the manuscript, we plotted taxa deemed significantly deferentially abundant using linear models after treating patientid as a random effect. Below we show how these models were constructed using mock data. 
+```  
+
+```{r, echo=T, eval=T, message=FALSE, warning=FALSE}
+## Differential abundance analysis using mixed linear models
+# These models test which metabolic pathways/taxa are significantly deferentially abundant in post-transplantation timepoints as compared to pre-transplantation
+
+# RCLR transformed abundance table from DEICODE
+# Here we use the mock data
+# And metabolic pathways
+
+ftbl_rclr <- 
+  read.csv("~/TransplantLines/mockdata/deicode_output/Mocks_Pathways_Filtered_rclr.csv", row.names=1)
+
+meta <- metadata %>%
+  select(-ID) %>% 
+  rename(`ID`=`mockID`) %>% 
+  filter(Timepoint_All %in% c("3M","6M","12M","24M","PreTxRTR")) 
+
+# Subset to renal longitudinal samples and exclude healthy controls
+ftbl_rclr <- ftbl_rclr[,colnames(ftbl_rclr) %in% meta$ID]
+ftbl_rclr <- t(ftbl_rclr)
+
+lm_data <- data.frame(ftbl_rclr, check.names=F, stringsAsFactors=F) %>%
+  rownames_to_column("ID") %>%
+  left_join(select(meta, ID, Patient=anonymID, TimePoint=Timepoint_All), by="ID") %>% 
+  mutate(TimePoint=factor(TimePoint, levels=c("PreTxRTR","3M","6M","12M","24M")))
+
+lm_ls <- vector("list", ncol(ftbl_rclr))
+names(lm_ls) <- colnames(ftbl_rclr)
+for(taxon in colnames(ftbl_rclr)) {
+  tryCatch({
+  m <- lm(lm_data[,taxon]~TimePoint, data=lm_data[,c(taxon,"TimePoint","Patient")])
+  mm <- data.frame(coef(summary(m)))
+  colnames(mm)[4] <- "p_val"
+  lm_ls[[taxon]] <- mm
+  }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
+}
+
+lm_ls %>% 
+  bind_rows(.id="taxon_id") %>% 
+  rownames_to_column("group") %>% 
+  separate(group, into=c("group",NA)) %>% 
+  filter(group!="") %>% 
+  mutate(group=recode(group, "TimePointPreTxRTR"="PreTxRTR","TimePoint3M"="3M","TimePoint6M"="6M","TimePoint12M"="12M","TimePoint24M"="24M"),
+         p_adj=p.adjust(p_val, "BH"),
+         #taxon_id=str_split_fixed(taxon_id, ".s__", 2)[,2],
+         sign=sign(Estimate),
+         sign=ifelse(sign=="1","+","-"),
+         group=fct_relevel(group, c("3M","6M","12M","24M")),
+         taxon_id=fct_reorder(taxon_id, Estimate, median)) %>%
+  filter(p_adj<0.1) %>% 
+  ggplot(aes(y=taxon_id,x=group,fill=Estimate)) +
+  geom_tile() +
+  scale_fill_gradient2(name="Effect size", low = "#AA1111", mid = "white", high = "#1111AA") +
+  theme(legend.title=element_text(size=10, color="black"),
+        plot.title=element_text(size=10),
+        panel.grid.major=element_blank(), 
+        panel.grid.minor=element_blank(), 
+        panel.background=element_rect(fill="white"),
+        panel.border=element_rect(colour="black", fill=NA, size=1),
+        axis.text.x=element_text(color="black",hjust=1),
+        axis.text.y=element_text(color="black", size=5)) +
+  labs(x=NULL, y=NULL)
+
+```
