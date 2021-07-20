@@ -493,6 +493,96 @@ Spline_DTHC_RCLR_RTR <- ggplot(MortalityDissimilarity, aes(DToHC))+
         plot.title = element_text(face="bold",size=17,hjust = 0.4,vjust=3),plot.margin=unit(c(1.5,0.5,0.5,0.5),"cm"))
 Spline_DTHC_RCLR_RTR
 ```
+
+```{r}
+# Re-produce Fig. 2E and 2H using mock data
+
+# Here we have compute each samples to the centroid of HC (in the above analysis, this was read-in from MockData_Dissimilarities_RCLR.csv)
+ftbl_rclr <- 
+  read.csv("/mock_data/deicode_output/Mocks_Taxa_Filtered_rclr.csv", row.names=1)
+
+# Subset to RTR_CS_TxN, 12months_TxN, 24months_TxN renal samples and samples from healthy controls
+ftbl_rclr <- ftbl_rclr[,colnames(ftbl_rclr) %in% c(CDmeta[CDmeta$Timepoint_All %in% "Healthy Control",]$mockID, paste0("MOCK_",CDmetaSurvival_RTR$ID))]
+
+aitch_dist <- dist(t(ftbl_rclr), method="euclidean")
+aitch_dist <- as.matrix(aitch_dist)
+
+# Create data.frame of focal samples
+Diss_RCLR <- CDmeta %>% 
+  select(ID=mockID, Timepoint_All) %>% 
+  mutate(DToHC=NA) %>% 
+  filter(ID %in% colnames(ftbl_rclr))
+
+# sample ids from all healthy controls
+HC_ids <- Diss_RCLR[Diss_RCLR$Timepoint_All %in% "Healthy Control",]$ID
+
+for(id in Diss_RCLR$ID) {
+  Diss_RCLR[Diss_RCLR$ID==id,]$DToHC <- mean(Reduce(c,aitch_dist[id, HC_ids])/max(aitch_dist,na.rm=T),na.rm=T)
+}
+
+Diss_RCLR$ID <- rownames(Diss_RCLR)
+MortalityDissimilarity<- merge(CDmetaSurvival_RTR, Diss_RCLR, by="ID")
+
+#Cox Regression Unadjusted
+Surv<- coxph(formula = Surv(MortalityDissimilarity$Days_since_sampling, MortalityDissimilarity$DeathNumeric) 
+             ~ scale(MortalityDissimilarity$DToHC))
+summary(Surv)
+
+#Cox Regression Unadjusted
+Surv<- coxph(formula = Surv(MortalityDissimilarity$Days_since_sampling, MortalityDissimilarity$DeathNumeric) 
+             ~ scale(MortalityDissimilarity$DToHC) + 
+               MortalityDissimilarity$Months_since_transplantation + 
+               MortalityDissimilarity$Age +
+               MortalityDissimilarity$Gender)
+summary(Surv)
+
+summary(MortalityDissimilarity$DToHC)
+d4 <- MortalityDissimilarity[c("DToHC")]
+dd <- datadist(d4, q.display=c(0,1),q.effect=c(0,1))
+options(datadist = "dd")
+f1<- with(MortalityDissimilarity, cph(Surv(Days_since_sampling,DeathNumeric==1) ~  DToHC))
+pdata1 <- Predict(f1, DToHC, ref.zero = TRUE, fun = exp,np = 10000)
+
+#Transform Plot, 1, extract freq per bin, then transform and plot
+binFreqTable <- function(x, bins) {
+  
+  freq = hist(x, breaks=bins, include.lowest=TRUE, plot=FALSE)
+  
+  ranges = paste(head(freq$breaks,-1), freq$breaks[-1], sep=" - ")
+  
+  return(data.frame(range = ranges, frequency = freq$counts))
+  
+}
+x<- MortalityDissimilarity$DToHC
+FreqDF <- binFreqTable(x,seq(0,1,by=0.01))
+FreqDF$freqtransf <- FreqDF$frequency/10
+FreqDF$rangeNum <- as.numeric(FreqDF$range)
+FreqDF$rangeNum <- FreqDF$rangeNum/100
+
+maxY_DTHC_RTR  <- 8
+maxYforSpline_DTHC_RTR <- max(pdata1$yhat[pdata1$yhat < maxY_DTHC_RTR])
+
+Spline_DTHC_RCLR_RTR <- ggplot(MortalityDissimilarity, aes(DToHC))+
+  geom_bar(aes(x=rangeNum, y=freqtransf), stat="identity", data=FreqDF, color="black", fill="white")+
+  geom_ribbon(aes( ymin = pmax(lower,0.00001), ymax = pmin(upper,maxYforSpline_DTHC_RTR)), fill="#45b6fe", color="#45b6fe",alpha = .4, data = as.data.frame(pdata1))+
+  geom_line(aes(y = yhat), col = "#45b6fe",alpha = 0.8,linetype=1,size=1.3, data = as.data.frame(pdata1))+
+  geom_hline(aes(yintercept = 1), linetype = 2,color="grey",size=1.2,alpha=1)+
+  xlab("Aitchison distance to healthy controls") + ylab("Hazard ratio Mortality (95% CI)")+
+  theme_classic()+
+  scale_x_continuous(limits=c(0.2,0.4),expand = c(0,0))+
+  scale_y_continuous(limits=c(0,maxY_DTHC_RTR),expand = c(0,0),
+                     sec.axis = sec_axis(trans=~., name="Frequency", breaks=c(0,1,2,3,4,5,6,7,8)))+
+  theme(axis.line = element_line(colour = "black"),
+        axis.text = element_text(colour = "black", size=14),
+        axis.title.x = element_text(color="black", size=14, face="bold", vjust=-0.5),
+        axis.title.y.left = element_text(color="black", size=14, face="bold", vjust=4),
+        axis.text.x = element_text(size=14, face="bold", colour = "black"),
+        axis.text.y = element_text(size=14, face="bold", colour = "black"),
+        axis.title.y.right = element_text(color="black", size=14, face="bold", vjust=4),
+        plot.title = element_text(face="bold",size=17,hjust = 0.4,vjust=3),plot.margin=unit(c(1.5,0.5,0.5,0.5),"cm"))
+Spline_DTHC_RCLR_RTR
+```
+
 ```{r}
 #Figure 2  Arrange all panels----
 Fig2AB <- ggarrange(Fig2A, Fig2B, nrow=1, align=c("h"), labels = c("A", "B"))
