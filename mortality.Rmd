@@ -364,7 +364,7 @@ Spline_Shannon_RTR
 ```{r}
 #Figure 2E Spline Aitchison distance to HC LTR----
 #Load data
-Diss_RCLR <- read.table("mock_data/MockData_Dissimilarities_RCLR.csv",sep=',',header=T)
+Diss_RCLR <- read.table("data_for_mortality/aitchison_distance_to_healthy_controls.csv",sep=',',header=T)
 row.names(Diss_RCLR) <- Diss_RCLR$ID
 MortalityDissimilarity<- merge(CDmetaSurvival_LTR, Diss_RCLR, by="row.names")
 
@@ -430,7 +430,7 @@ Spline_DTHC_RCLR_LTR
 ```{r}
 #Figure 2H Spline Distance to HC RTR----
 #Load data
-Diss_RCLR <- read.table("mock_data/MockData_Dissimilarities_RCLR.csv",sep=',',header=T)
+Diss_RCLR <- read.table("data_for_mortality/aitchison_distance_to_healthy_controls.csv",sep=',',header=T)
 row.names(Diss_RCLR) <- Diss_RCLR$ID
 MortalityDissimilarity<- merge(CDmetaSurvival_RTR, Diss_RCLR, by="row.names")
 
@@ -497,7 +497,8 @@ Spline_DTHC_RCLR_RTR
 ```{r}
 # Re-produce Fig. 2E and 2H using mock data
 
-# Here we have compute each samples to the centroid of HC (in the above analysis, this was read-in from MockData_Dissimilarities_RCLR.csv)
+# Here we first compute each sample's distance to the centroid of all healthy controls using mock data (in the above analysis, this was read-in from data_for_mortality/aitchison_distance_to_healthy_controls.csv")
+
 ftbl_rclr <- 
   read.csv("/mock_data/deicode_output/Mocks_Taxa_Filtered_rclr.csv", row.names=1)
 
