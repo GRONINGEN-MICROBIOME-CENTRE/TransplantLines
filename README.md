@@ -2,7 +2,7 @@ This github repository provides the code to reproduce the analyses presented in 
 
 By: Weersma Group, Fu Group and Zhernakova Group, UMCG, The Netherlands
 
-Last updated 19-07-2021
+Last updated 20-07-2021
 
 ----------------------------------------------------------------------------------------------------------------------
 **File index:**
