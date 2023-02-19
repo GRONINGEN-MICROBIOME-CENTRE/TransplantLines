@@ -1,0 +1,225 @@
+---
+title: "Other phenotypes - Gut microbiome TransplantLines"
+author: J.C. Swarte
+output: html_notebook
+# ==========================================================================================
+#                       By: Weersma Group, TransplantLines (UMCG)
+#
+#                       UMCG Transplantlines Project data analysis
+# ==========================================================================================
+#
+#                           Other phenotypes - Gut microbiome
+#
+# ==========================================================================================
+#
+# NOTE: This is implementation on Mock Data published in this github repo, and is intended 
+# for demonstration purposes only, the results are not identical to Figures in the manuscript
+#
+# NOTE2: Codes are intended to be run from root of this github repo, if running them from 
+# different location, make sure to adjust setwd to appropriate location 
+# (root of this github repo)
+#
+# ==========================================================================================
+#
+# make sure following packages are installed:
+# install.packages(c("foreign", "tidyverse", "ggplot2", "ggsignif", "vegan", "xlsx", "ggpubr", "psych", "RColorBrewer", #"corrplot", "lmtest", "patchwork", "Hmisc", "naniar", "QuantPsyc", "caret", "glmnet", "insight", "mediation", "cowplot", "reshape2"))
+
+# ==========================================================================================
+---
+```{r}
+#Load packages 
+library(foreign)
+library(tidyverse)
+library(ggplot2)
+library(ggsignif)
+library(vegan)
+library(xlsx)
+library(ggpubr)
+library(psych)
+library(RColorBrewer)
+library(corrplot)
+library(lmtest)
+library(patchwork)
+library(Hmisc)
+library(naniar)
+library(QuantPsyc)
+library(caret)
+library(glmnet)
+library(insight)
+library(mediation)
+library(cowplot)
+library(reshape2)
+```
+```{r}
+#Load Data ----
+QoLMeta <- readRDS("~/Meta_final_randomized.RDS")
+spDF_CS_12M_CLR <- readRDS("~/spDF_randomized.RDS")
+CDpwys_CS_12M_CLR <- readRDS("~/pathways_randomized.RDS") 
+Neuroactive_pot <- readRDS("~/Neuroactive_potential_randomized.RDS")
+```
+```{r}
+Aitchinson <- prcomp(spDF_CS_12M_CLR)
+AitchinsonDF <- as.data.frame(Aitchinson$x)
+QoLMeta <- merge(AitchinsonDF, QoLMeta, by="row.names")
+QoL_to_use_categorical <-   QoLMeta[c("ID", "PC1", "Shannon_Species", "DToHC",
+                          #Mental
+                          "Antidepressant",
+                          "Severe_Fatigue",
+                          "major_depression",
+                          "anxiety")]
+rownames(QoL_to_use_categorical) <- QoL_to_use_categorical$ID
+QoL_to_use_categorical$ID <- NULL
+QoL_to_use_categorical$Severe_Fatigue <- as.factor(QoL_to_use_categorical$Severe_Fatigue)
+levels(QoL_to_use_categorical$Antidepressant) <- c("0", "1")
+levels(QoL_to_use_categorical$Severe_Fatigue)
+levels(QoL_to_use_categorical$major_depression) <- c("0", "1")
+levels(QoL_to_use_categorical$anxiety) <- c("0", "1")
+
+QoL_to_use_categorical_test <- QoL_to_use_categorical
+QoL_to_use_categorical_test$Clinical_Fr_Score_3 <- NULL
+
+QoL_to_use_categorical_melted <- melt(
+  QoL_to_use_categorical,
+  c("PC1", "Shannon_Species", "DToHC"),
+  c("Antidepressant", "Severe_Fatigue", "major_depression", "anxiety"),
+  variable.name = c("Phenos"),
+  na.rm = FALSE,
+  value.name = c("value"),
+  factorsAsStrings = TRUE
+)
+QoL_to_use_categorical_melted$Facet <-  ifelse(                                              QoL_to_use_categorical_melted$Phenos == "Severe_Fatigue"
+       , "Physical", 
+       ifelse(QoL_to_use_categorical_melted$Phenos == "Antidepressant"|
+                QoL_to_use_categorical_melted$Phenos == "major_depression"|
+                QoL_to_use_categorical_melted$Phenos == "anxiety"
+              , "Mental", ""))
+QoL_to_use_categorical_melted$Facet <- as.factor(QoL_to_use_categorical_melted$Facet)
+levels(QoL_to_use_categorical_melted$Facet)
+QoL_to_use_categorical_melted$Facet <- relevel(QoL_to_use_categorical_melted$Facet, "Physical", "Mental")
+levels(QoL_to_use_categorical_melted$Facet)
+
+levels(QoL_to_use_categorical_melted$Phenos)
+QoL_to_use_categorical_melted$Phenos <- relevel(QoL_to_use_categorical_melted$Phenos,
+                                                "Severe_Fatigue",
+                                                "anxiety",
+                                                "major_depression", 
+                                                "Antidepressant")
+levels(QoL_to_use_categorical_melted$Phenos)
+
+PC1_Objective_phenos  <- 
+QoL_to_use_categorical_melted %>% 
+  drop_na(value) %>% 
+  ggplot(aes(x=Phenos, y=PC1, fill=value)) +
+  geom_boxplot(aes(color=value), alpha=0)+
+  geom_violin(aes(color = value), trim = FALSE, position = position_dodge(0.75), alpha=0)+
+  theme_classic()+
+  theme(
+    axis.title.y = element_text(size=14, face="bold", colour = "black"),    
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(size=14, face="bold", colour = "black", angle=45, vjust=0.5),
+    axis.text.y = element_text(size=12, face="bold", colour = "black", hjust = 0),
+    legend.text = element_text(face="bold"),
+    legend.title = element_text(face = "bold"),
+    plot.title=element_text(face = "bold"))+
+  ylab("PC1")+
+  scale_color_manual(values = c("0"="#03045e", "1"="#ffb703", "2"="red"))+
+  facet_wrap(vars(Facet), nrow = 1, scales = "free_x", strip.position = "top")
+PC1_Objective_phenos  
+#ggsave("PC1_Objective_phenos.png", device = "png", type = "cairo", dpi=300)
+#pdf("PC1_Objective_phenos.pdf")
+PC1_Objective_phenos
+#dev.off()
+
+Shannon_Objective_phenos  <- 
+  QoL_to_use_categorical_melted %>% 
+  drop_na(value) %>% 
+  ggplot(aes(x=Phenos, y=Shannon_Species, fill=value)) +
+  geom_boxplot(aes(color=value), alpha=0)+
+  geom_violin(aes(color = value), trim = FALSE, position = position_dodge(0.75), alpha=0)+
+  theme_classic()+
+  theme(
+    axis.title.y = element_text(size=14, face="bold", colour = "black"),    
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(size=14, face="bold", colour = "black", angle=45, vjust=0.5),
+    axis.text.y = element_text(size=12, face="bold", colour = "black", hjust = 0),
+    legend.text = element_text(face="bold"),
+    legend.title = element_text(face = "bold"),
+    plot.title=element_text(face = "bold"))+
+  ylab("Shannon diversity index")+
+  scale_color_manual(values = c("0"="#03045e", "1"="#ffb703", "2"="red"))+
+  facet_wrap(vars(Facet), nrow = 1, scales = "free_x", strip.position = "top")
+Shannon_Objective_phenos  
+#ggsave("Shannon_Objective_phenos.png", device = "png", type = "cairo", dpi=300)
+#pdf("Shannon_Objective_phenos.pdf")
+Shannon_Objective_phenos
+#dev.off()
+
+DtoHC_Objective_phenos  <- 
+  QoL_to_use_categorical_melted %>% 
+  drop_na(value) %>% 
+  ggplot(aes(x=Phenos, y=DToHC, fill=value)) +
+  geom_boxplot(aes(color=value), alpha=0)+
+  geom_violin(aes(color = value), trim = FALSE, position = position_dodge(0.75), alpha=0)+
+  theme_classic()+
+  theme(
+    axis.title.y = element_text(size=14, face="bold", colour = "black"),    
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(size=14, face="bold", colour = "black", angle=45, vjust=0.5),
+    axis.text.y = element_text(size=12, face="bold", colour = "black", hjust = 0),
+    legend.text = element_text(face="bold"),
+    legend.title = element_text(face = "bold"),
+    plot.title=element_text(face = "bold"))+
+  ylab("Distance to general population control")+
+  scale_color_manual(values = c("0"="#03045e", "1"="#ffb703", "2"="red"))+
+  facet_wrap(vars(Facet), nrow = 1, scales = "free_x", strip.position = "top")
+DtoHC_Objective_phenos  
+#ggsave("DtoHC_Objective_phenos.png", device = "png", type = "cairo", dpi=300)
+#pdf("DtoHC_Objective_phenos.pdf")
+DtoHC_Objective_phenos
+#dev.off()
+
+Combined_boxplots <- PC1_Objective_phenos+Shannon_Objective_phenos+DtoHC_Objective_phenos+plot_annotation(tag_levels = 'A')+plot_layout(ncol = 1, guides="collect")
+Combined_boxplots
+#ggsave("Combined_boxplots.png", device = "png", type = "cairo", dpi=300, w=15, h=15)
+#pdf("Combined_boxplots.pdf", w=15, h=15)
+Combined_boxplots
+#dev.off()
+
+wilcox.test(QoLMeta$PC1, QoLMeta$Physical_activity_score)
+pairwise.wilcox.test(QoLMeta$PC1, QoLMeta$Clinical_Fr_Score_3,
+                     p.adjust.method = "none")
+wilcox.test(QoLMeta$PC1, QoLMeta$Severe_Fatigue)
+wilcox.test(QoLMeta$PC1, as.numeric(QoLMeta$Antidepressant))
+wilcox.test(QoLMeta$PC1, as.numeric(QoLMeta$major_depression))
+wilcox.test(QoLMeta$PC1, as.numeric(QoLMeta$anxiety))
+
+wilcox.test(QoLMeta$Shannon_Species, QoLMeta$Physical_activity_score)
+pairwise.wilcox.test(QoLMeta$Shannon_Species, QoLMeta$Clinical_Fr_Score_3,
+                     p.adjust.method = "none")
+wilcox.test(QoLMeta$Shannon_Species, QoLMeta$Severe_Fatigue)
+wilcox.test(QoLMeta$Shannon_Species, as.numeric(QoLMeta$Antidepressant))
+wilcox.test(QoLMeta$Shannon_Species, as.numeric(QoLMeta$major_depression))
+wilcox.test(QoLMeta$Shannon_Species, as.numeric(QoLMeta$anxiety))
+
+wilcox.test(QoLMeta$DToHC, QoLMeta$Physical_activity_score)
+pairwise.wilcox.test(QoLMeta$DToHC, QoLMeta$Clinical_Fr_Score_3,
+                     p.adjust.method = "none")
+wilcox.test(QoLMeta$DToHC, QoLMeta$Severe_Fatigue)
+wilcox.test(QoLMeta$DToHC, as.numeric(QoLMeta$Antidepressant))
+wilcox.test(QoLMeta$DToHC, as.numeric(QoLMeta$major_depression))
+wilcox.test(QoLMeta$DToHC, as.numeric(QoLMeta$anxiety))
+
+#heatmap
+QoL_to_use_num <-   QoLMeta[c("PC1", "Shannon_Species", "DToHC",
+                                      #Physical
+                                      "FYSWLK2MDIST",
+                                      "Max_HGT",
+                                      "Min_4mWT",
+                                      "min_STST",
+                                      "Min_TUG")]
+CorrelationMatrix <- rcorr(as.matrix(QoL_to_use_num), type = "spearman")
+#pdf(file="HM_Spearman_DToHC.pdf", h=15, w=15)
+corrplot::corrplot(CorrelationMatrix$r, p.mat=CorrelationMatrix$P, type="full",sig.level = 0.05, insig="blank", method="color", 
+                   addgrid.col = 'black', number.cex=0.3, tl.col = "black", is.corr = T, cl.pos="b", col=rev(COL2('RdBu', 200)))
+#dev.off()
+```

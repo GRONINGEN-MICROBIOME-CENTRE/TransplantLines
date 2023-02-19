@@ -1,0 +1,1151 @@
+---
+title: "Differential abundance analysis for HRQoL - Gut microbiome TransplantLines"
+author: J.C. Swarte
+output: html_notebook
+# ==========================================================================================
+#                       By: Weersma Group, TransplantLines (UMCG)
+#
+#                       UMCG Transplantlines Project data analysis
+# ==========================================================================================
+#
+#              Differential abundance analysis for HRQoL - Gut microbiome
+#
+# ==========================================================================================
+#
+# NOTE: This is implementation on Mock Data published in this github repo, and is intended 
+# for demonstration purposes only, the results are not identical to Figures in the manuscript
+#
+# NOTE2: Codes are intended to be run from root of this github repo, if running them from 
+# different location, make sure to adjust setwd to appropriate location 
+# (root of this github repo)
+#
+# ==========================================================================================
+#
+# make sure following packages are installed:
+# install.packages(c("foreign", "tidyverse", "ggplot2", "ggsignif", "vegan", "xlsx", "ggpubr", "psych", "RColorBrewer", #"corrplot", "lmtest", "patchwork", "Hmisc", "naniar", "QuantPsyc", "caret", "glmnet", "insight", "mediation", "cowplot"))
+
+# ==========================================================================================
+---
+```{r}
+#Load packages 
+library(foreign)
+library(tidyverse)
+library(ggplot2)
+library(ggsignif)
+library(vegan)
+library(xlsx)
+library(ggpubr)
+library(psych)
+library(RColorBrewer)
+library(corrplot)
+library(lmtest)
+library(patchwork)
+library(Hmisc)
+library(naniar)
+library(QuantPsyc)
+library(caret)
+library(glmnet)
+library(insight)
+library(mediation)
+library(cowplot)
+```
+```{r}
+#Load Data ----
+QoLMeta <- readRDS("~/Meta_final_randomized.RDS")
+spDF_CS_12M_CLR <- readRDS("~/spDF_randomized.RDS")
+CDpwys_CS_12M_CLR <- readRDS("~/pathways_randomized.RDS") 
+Neuroactive_pot <- readRDS("~/Neuroactive_potential_randomized.RDS")
+```
+```{r}
+#Loop Elastic-Net models - Taxa - numerical ----
+QoL_to_use <-   QoLMeta[c("ID",
+         #RAND36
+         "R_Physical_Functioning",
+         "R_Social_Functioning",
+         "R_Physical_Restrain",
+         "R_Emotional_Restrain",
+         "R_Mental_Health",
+         "R_Vitality",
+         "R_Pain",
+         "R_General_Health_Attribution",
+         "Physical_Component_Scale",
+         "Mental_Component_Scale",
+         #Physical
+         "Max_HGT",
+         "min_STST",
+         "Min_TUG",
+         "Min_4mWT",
+         "FYSWLK2MDIST",
+         "Physical_activity_score")]
+rownames(QoL_to_use) <- QoL_to_use$ID
+
+
+# Species - Taxon-specific linear models 
+spDF_CS_12M_CLR_names <- spDF_CS_12M_CLR
+colnames(spDF_CS_12M_CLR_names) <- str_split_fixed(colnames(spDF_CS_12M_CLR_names), "\\.", 7)[,7]
+colnames(spDF_CS_12M_CLR_names) <- gsub("s__", "",colnames(spDF_CS_12M_CLR_names))
+
+spDF_CS_12M_CLR_names$ID <- rownames(spDF_CS_12M_CLR_names)
+Test_elastic_net_transplantlines <- merge(QoL_to_use, spDF_CS_12M_CLR_names)
+spDF_CS_12M_CLR_names$ID <- NULL
+rownames(Test_elastic_net_transplantlines) <- Test_elastic_net_transplantlines$ID
+Test_elastic_net_transplantlines$ID <- NULL
+
+
+#Make a list for results
+Predictor_df <- QoLMeta[c("ID",
+         #Confounders
+         "Age",
+         "Sex",
+         "BMI",
+         "PPI",
+         "Laxative",
+         "Antibiotics",
+         "Dialysis",
+         "eGFR",
+         "Diabetes",
+         "Antihypertensive_treatment")]
+
+spDF_CS_12M_CLR_names <- spDF_CS_12M_CLR
+colnames(spDF_CS_12M_CLR_names) <- str_split_fixed(colnames(spDF_CS_12M_CLR_names), "\\.", 7)[,7]
+colnames(spDF_CS_12M_CLR_names) <- gsub("s__", "",colnames(spDF_CS_12M_CLR_names))
+
+spDF_CS_12M_CLR_names$ID <- rownames(spDF_CS_12M_CLR_names)
+Predictor_df <- merge(Predictor_df, spDF_CS_12M_CLR_names)
+spDF_CS_12M_CLR_names$ID <- NULL
+rownames(Predictor_df) <- Predictor_df$ID
+QoL_to_use$ID <- NULL
+
+#Make lists to store results in
+coef_ls_num <- vector("list", ncol(QoL_to_use))
+names(coef_ls_num) <- colnames(QoL_to_use)
+RMSE_Model_results_train <- vector("list", ncol(QoL_to_use))
+names(RMSE_Model_results_train) <- paste("RMSE", colnames(QoL_to_use), sep="_") 
+RMSE_Model_percentage_results_train <- vector("list", ncol(QoL_to_use))
+names(RMSE_Model_percentage_results_train) <- paste("RMSE_percentage", colnames(QoL_to_use), sep="_") 
+RMSE_Model_results_test <- vector("list", ncol(QoL_to_use))
+names(RMSE_Model_results_test) <- paste("RMSE", colnames(QoL_to_use), sep="_") 
+RMSE_Model_percentage_results_test <- vector("list", ncol(QoL_to_use))
+names(RMSE_Model_percentage_results_test) <- paste("RMSE_percentage", colnames(QoL_to_use), sep="_") 
+pred_cor_train_set_r_results <- vector("list", ncol(QoL_to_use))
+names(pred_cor_train_set_r_results) <- paste("Cor_train_set_r", colnames(QoL_to_use), sep="_") 
+pred_cor_train_set_P_results <- vector("list", ncol(QoL_to_use))
+names(pred_cor_train_set_P_results) <- paste("Cor_train_set_P", colnames(QoL_to_use), sep="_") 
+pred_cor_test_set_r_results <- vector("list", ncol(QoL_to_use))
+names(pred_cor_test_set_r_results) <- paste("Cor_test_set_r", colnames(QoL_to_use), sep="_") 
+pred_cor_test_set_P_results <- vector("list", ncol(QoL_to_use))
+names(pred_cor_test_set_P_results) <- paste("Cor_test_set_P", colnames(QoL_to_use), sep="_") 
+QoL_to_use$ID <- rownames(QoL_to_use)
+
+#Run amazing Elastic-Net loop :)
+for(QoLfeature in colnames(QoL_to_use)) {
+  tryCatch({
+    print(QoLfeature)
+    #Create test dataframe with NAs removed
+    Feature_of_interest <- na.omit(QoL_to_use[c(QoLfeature, "ID")])
+    Predictor_test_df <- merge(Feature_of_interest, Predictor_df)
+    rownames(Predictor_test_df) <- Predictor_test_df$ID
+    Predictor_test_df$ID <- NULL
+    
+    #Remove missing predictors
+    Predictor_test_df <- na.omit(Predictor_test_df)
+    #Create Train and Test set
+    responseVar <- QoLfeature
+    inTrain <- createDataPartition(y=Predictor_test_df[[responseVar]],p=0.75,list=F)
+    trainSet <- Predictor_test_df[inTrain,]
+    testSet <- Predictor_test_df[-inTrain,]
+    
+    #Define training scheme
+    trC <- trainControl(method="cv",number=20,repeats = 10,
+                        savePredictions = T,
+                        #classProbs = T,
+                        allowParallel = F)
+    #train Regression example
+    frm <- reformulate(response = responseVar,termlabels = ".")
+    set.seed(100)
+    mdl <- train(frm,
+                 data = trainSet,
+                 trControl = trC,
+                 method="glmnet",
+                 #metric="Accuracy",
+                 family="gaussian",
+                 #family="binomial",
+                 tuneLength = 30
+                 )
+    
+    #Prediction
+    print("Predication")
+    testRes <- predict(mdl,newdata = testSet)
+    testRes_train <- predict(mdl,newdata = trainSet)
+    
+    #Model characteristics
+    print("Model characteristics")
+    RMSE_Model_train <- RMSE(trainSet[,1], testRes_train)
+    RMSE_Model_percentage_train <- (RMSE(trainSet[,1], testRes_train))/mean(trainSet[,1])
+    RMSE_Model_test <- RMSE(testSet[,1], testRes)
+    RMSE_Model_percentage_test <- (RMSE(testSet[,1], testRes))/mean(testSet[,1])
+    
+    
+    
+    #Find correlation between predicted and observed in training set
+    pred_cor_train_set <- cor.test(trainSet[,1], testRes_train)
+    pred_cor_train_set_r <- pred_cor_train_set$estimate
+    pred_cor_train_set_P <- pred_cor_train_set$p.value
+    #Find correlation between predicted and observed in testing set
+    pred_cor_test_set <- cor.test(testSet[,1], testRes)
+    pred_cor_test_set_r <- pred_cor_test_set$estimate
+    pred_cor_test_set_P <- pred_cor_test_set$p.value
+    
+    print("Extracting model")
+    # extract coefficients
+    # lambda & alpha
+    mdl$bestTune
+    # actual coefs
+    coefs <- coef(mdl$finalModel,mdl$bestTune$lambda)
+    coefs_best_model <- as.data.frame(as.matrix(coefs))
+    colnames(coefs_best_model) <- paste("coef", QoLfeature, sep="_")
+    #coefs_best_model$Covariate <- rownames(coefs_best_model)
+    #Store in list
+    RMSE_Model_results_train[[QoLfeature]] <- RMSE_Model_train
+    RMSE_Model_percentage_results_train[[QoLfeature]] <- RMSE_Model_percentage_train
+    RMSE_Model_results_test[[QoLfeature]] <- RMSE_Model_test
+    RMSE_Model_percentage_results_test[[QoLfeature]] <- RMSE_Model_percentage_test
+    pred_cor_train_set_r_results[[QoLfeature]] <- pred_cor_train_set_r
+    pred_cor_train_set_P_results[[QoLfeature]] <- pred_cor_train_set_P
+    pred_cor_test_set_r_results[[QoLfeature]] <- pred_cor_test_set_r
+    pred_cor_test_set_P_results[[QoLfeature]] <- pred_cor_test_set_P
+    coef_ls_num[[QoLfeature]] <- coefs_best_model
+  }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
+}
+
+Elastic_Net_results <- coef_ls_num %>%
+  bind_cols()
+Elastic_Net_results$Feature <- rownames(Elastic_Net_results)
+Elastic_Net_results <- Elastic_Net_results[,c(ncol(Elastic_Net_results),1:ncol(Elastic_Net_results)-1)]
+#saveRDS(Elastic_Net_results, "Elastic_Net_Numerical_results_df.rds")
+#write.xlsx(Elastic_Net_results, "Elastic_Net_Numerical_results_df.xlsx")
+
+#Model metrics
+#RMSE Train
+RMSE_Model_results_train_df <- RMSE_Model_results_train %>%
+  bind_rows()
+RMSE_Model_results_train_df <- as.data.frame(t.data.frame(RMSE_Model_results_train_df))
+colnames(RMSE_Model_results_train_df) <- c("RSME_train")
+#saveRDS(RMSE_Model_results_train_df, "RMSE_Model_results_train_df.rds")
+
+RMSE_Model_percentage_train_df <- RMSE_Model_percentage_results_train %>%
+  bind_rows()
+RMSE_Model_percentage_train_df <- as.data.frame(t.data.frame(RMSE_Model_percentage_train_df))
+colnames(RMSE_Model_percentage_train_df) <- c("RSME_percentage_train")
+#saveRDS(RMSE_Model_percentage_train_df, "RMSE_Model_percentage_train_df.rds")
+
+#RMSE Train
+RMSE_Model_results_test_df <- RMSE_Model_results_test %>%
+  bind_rows()
+RMSE_Model_results_test_df <- as.data.frame(t.data.frame(RMSE_Model_results_test_df))
+colnames(RMSE_Model_results_test_df) <- c("RSME_test")
+#saveRDS(RMSE_Model_results_test_df, "RMSE_Model_results_test_df.rds")
+
+
+RMSE_Model_percentage_test_df <- RMSE_Model_percentage_results_test %>%
+  bind_rows()
+RMSE_Model_percentage_test_df <- as.data.frame(t.data.frame(RMSE_Model_percentage_test_df))
+colnames(RMSE_Model_percentage_test_df) <- c("RSME_percentage_test")
+#saveRDS(RMSE_Model_percentage_test_df, "RMSE_Model_percentage_test_df.rds")
+
+pred_cor_train_set_r_df <- pred_cor_train_set_r_results %>%
+  bind_cols()
+pred_cor_train_set_r_df <- as.data.frame(t.data.frame(pred_cor_train_set_r_df))
+colnames(pred_cor_train_set_r_df) <- c("Cor_train_set_r")
+#saveRDS(pred_cor_train_set_r_df, "pred_cor_train_set_r_df.rds")
+
+pred_cor_train_set_P_df <- pred_cor_train_set_P_results %>%
+  bind_rows()
+pred_cor_train_set_P_df <- as.data.frame(t.data.frame(pred_cor_train_set_P_df))
+colnames(pred_cor_train_set_P_df) <- c("Cor_train_set_P")
+#saveRDS(pred_cor_train_set_P_df, "pred_cor_train_set_P_df.rds")
+
+pred_cor_test_set_r_df <- pred_cor_test_set_r_results %>%
+  bind_rows()
+pred_cor_test_set_r_df <- as.data.frame(t.data.frame(pred_cor_test_set_r_df))
+colnames(pred_cor_test_set_r_df) <- c("Cor_test_set_r")
+#saveRDS(pred_cor_test_set_r_df, "pred_cor_test_set_r_df.rds")
+
+pred_cor_test_set_P_df <- pred_cor_test_set_P_results %>%
+  bind_rows()
+pred_cor_test_set_P_df <- as.data.frame(t.data.frame(pred_cor_test_set_P_df))
+colnames(pred_cor_test_set_P_df) <- c("Cor_test_set_P")
+#saveRDS(pred_cor_test_set_P_df, "pred_cor_test_set_P_df.rds")
+
+```
+```{r}
+#Loop Elastic-Net models - Taxa - categorical ----
+QoL_to_use <-   QoLMeta[c("ID",
+                          #Mental
+                          "Antidepressant",
+                          "Severe_Fatigue",
+                          "major_depression",
+                          "anxiety")]
+rownames(QoL_to_use) <- QoL_to_use$ID
+
+
+
+QoL_to_use$Severe_Fatigue <- as.factor(QoL_to_use$Severe_Fatigue)
+levels(QoL_to_use$Severe_Fatigue) <- c("No severe fatigue", "Severe fatigue")
+summary(QoL_to_use$Severe_Fatigue)
+
+# Species - Taxon-specific linear models 
+spDF_CS_12M_CLR_names <- spDF_CS_12M_CLR
+colnames(spDF_CS_12M_CLR_names) <- str_split_fixed(colnames(spDF_CS_12M_CLR_names), "\\.", 7)[,7]
+colnames(spDF_CS_12M_CLR_names) <- gsub("s__", "",colnames(spDF_CS_12M_CLR_names))
+
+spDF_CS_12M_CLR_names$ID <- rownames(spDF_CS_12M_CLR_names)
+Test_elastic_net_transplantlines <- merge(QoL_to_use, spDF_CS_12M_CLR_names)
+spDF_CS_12M_CLR_names$ID <- NULL
+rownames(Test_elastic_net_transplantlines) <- Test_elastic_net_transplantlines$ID
+Test_elastic_net_transplantlines$ID <- NULL
+
+
+#Make a list for results
+Predictor_df <- QoLMeta[c("ID",
+                          #Confounders
+                          "Age",
+                          "Sex",
+                          "BMI",
+                          "PPI",
+                          "Laxative",
+                          "Antibiotics",
+                          "Dialysis",
+                          "eGFR",
+                          "Diabetes",
+                          "Antihypertensive_treatment")]
+
+spDF_CS_12M_CLR_names <- spDF_CS_12M_CLR
+colnames(spDF_CS_12M_CLR_names) <- str_split_fixed(colnames(spDF_CS_12M_CLR_names), "\\.", 7)[,7]
+colnames(spDF_CS_12M_CLR_names) <- gsub("s__", "",colnames(spDF_CS_12M_CLR_names))
+
+spDF_CS_12M_CLR_names$ID <- rownames(spDF_CS_12M_CLR_names)
+Predictor_df <- merge(Predictor_df, spDF_CS_12M_CLR_names)
+spDF_CS_12M_CLR_names$ID <- NULL
+rownames(Predictor_df) <- Predictor_df$ID
+QoL_to_use$ID <- NULL
+
+#Make lists to store results in
+coef_ls_num <- vector("list", ncol(QoL_to_use))
+names(coef_ls_num) <- colnames(QoL_to_use)
+Accuracy_Model_results_train <- vector("list", ncol(QoL_to_use))
+names(Accuracy_Model_results_train) <- paste("Accuracy", colnames(QoL_to_use), sep="_") 
+Accuracy_Model_results_test <- vector("list", ncol(QoL_to_use))
+names(Accuracy_Model_results_test) <- paste("Accuracy", colnames(QoL_to_use), sep="_") 
+
+QoL_to_use$ID <- rownames(QoL_to_use)
+
+#Run amazing Elastic-Net loop :)
+for(QoLfeature in colnames(QoL_to_use)) {
+  tryCatch({
+    print(QoLfeature)
+    #Create test dataframe with NAs removed
+    Feature_of_interest <- na.omit(QoL_to_use[c(QoLfeature, "ID")])
+    Predictor_test_df <- merge(Feature_of_interest, Predictor_df)
+    rownames(Predictor_test_df) <- Predictor_test_df$ID
+    Predictor_test_df$ID <- NULL
+    
+    #Remove missing predictors
+    Predictor_test_df <- na.omit(Predictor_test_df)
+    #Create Train and Test set
+    responseVar <- QoLfeature
+    inTrain <- createDataPartition(y=Predictor_test_df[[responseVar]],p=0.75,list=F)
+    trainSet <- Predictor_test_df[inTrain,]
+    testSet <- Predictor_test_df[-inTrain,]
+    
+    #Define training scheme
+    trC <- trainControl(method="cv",number=20,repeats = 10,
+                        savePredictions = T,
+                        #classProbs = T,
+                        allowParallel = F)
+    #train Regression example
+    frm <- reformulate(response = responseVar,termlabels = ".")
+    set.seed(100)
+    mdl <- train(frm,
+                 data = trainSet,
+                 trControl = trC,
+                 method="glmnet",
+                 metric="Accuracy",
+                 family="binomial",
+                 tuneLength = 30, 
+                 savePredictions =T)
+    #Prediction
+    print("Predication")
+    testRes <- predict(mdl,newdata = testSet)
+    testRes_train <- predict(mdl,newdata = trainSet)
+    
+    #Model Metrics
+    print("Model Metrics")
+    confusionMatrix_train <- confusionMatrix(data = testRes_train,reference = as.factor(as.character(trainSet[,1])))
+    Accuracy_train_value <- confusionMatrix_train$overall[1]
+    Accuracy_train_value <- gsub("Accuracy", "", Accuracy_train_value)
+    confusionMatrix_test <- confusionMatrix(data = testRes,reference = as.factor(as.character(testSet[,1])))
+    Accuracy_test_value <- confusionMatrix_test$overall[1]
+    Accuracy_test_value <- gsub("Accuracy", "", Accuracy_test_value)
+   
+    print("Extracting model")
+    # extract coefficients
+    # lambda & alpha
+    mdl$bestTune
+    # actual coefs
+    coefs <- coef(mdl$finalModel,mdl$bestTune$lambda)
+    coefs_best_model <- as.data.frame(as.matrix(coefs))
+    colnames(coefs_best_model) <- paste("coef", QoLfeature, sep="_")
+    #coefs_best_model$Covariate <- rownames(coefs_best_model)
+    #Store in list
+    Accuracy_Model_results_train[[QoLfeature]] <- Accuracy_train_value
+    Accuracy_Model_results_test[[QoLfeature]] <-  Accuracy_test_value
+    coef_ls_num[[QoLfeature]] <- coefs_best_model
+  }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
+}
+
+Elastic_Net_results <- coef_ls_num %>%
+  bind_cols()
+Elastic_Net_results$Feature <- rownames(Elastic_Net_results)
+Elastic_Net_results <- Elastic_Net_results[,c(ncol(Elastic_Net_results),1:ncol(Elastic_Net_results)-1)]
+
+#saveRDS(Elastic_Net_results, "Elastic_Net_Categorical_results_df.rds")
+#write.xlsx(Elastic_Net_results, "Elastic_Net_Categorical_results_df.xlsx")
+
+#Model metrics
+Accuracy_Model_results_train_df <- Accuracy_Model_results_train %>%
+  bind_rows()
+Accuracy_Model_results_train_df <- as.data.frame(t.data.frame(Accuracy_Model_results_train_df))
+colnames(Accuracy_Model_results_train_df) <- c("Accuracy_train")
+Accuracy_Model_results_train_df$Feature <- rownames(Accuracy_Model_results_train_df)
+
+#saveRDS(Accuracy_Model_results_train_df, "Accuracy_trainset_Categorical_results_df.rds")
+
+Accuracy_Model_results_test_df <- Accuracy_Model_results_test %>%
+  bind_rows()
+Accuracy_Model_results_test_df <- as.data.frame(t.data.frame(Accuracy_Model_results_test_df))
+colnames(Accuracy_Model_results_test_df) <- c("Accuracy_test")
+Accuracy_Model_results_test_df$Feature <- rownames(Accuracy_Model_results_test_df)
+
+#saveRDS(Accuracy_Model_results_test_df, "Accuracy_testset_Categorical_results_df.rds")
+
+
+```
+```{r}
+#Loop Elastic-Net models - Pathways - numerical ----
+QoL_to_use <-   QoLMeta[c("ID",
+         #RAND36
+         "R_Physical_Functioning",
+         "R_Social_Functioning",
+         "R_Physical_Restrain",
+         "R_Emotional_Restrain",
+         "R_Mental_Health",
+         "R_Vitality",
+         "R_Pain",
+         "R_General_Health_Attribution",
+         "Physical_Component_Scale",
+         "Mental_Component_Scale",
+         #Physical
+         "Max_HGT",
+         "min_STST",
+         "Min_TUG",
+         "Min_4mWT",
+         "FYSWLK2MDIST",
+         "Physical_activity_score")]
+rownames(QoL_to_use) <- QoL_to_use$ID
+
+
+# Species - Taxon-specific linear models 
+CDpwys_CS_12M_CLR$ID <- rownames(CDpwys_CS_12M_CLR)
+Test_elastic_net_transplantlines <- merge(QoL_to_use, CDpwys_CS_12M_CLR)
+
+rownames(Test_elastic_net_transplantlines) <- Test_elastic_net_transplantlines$ID
+Test_elastic_net_transplantlines$ID <- NULL
+
+
+#Make a list for results
+Predictor_df <- QoLMeta[c("ID",
+                          #Confounders
+                          "Age",
+                          "Sex",
+                          "BMI",
+                          "PPI",
+                          "Laxative",
+                          "Antibiotics",
+                          "Dialysis",
+                          "eGFR",
+                          "Diabetes",
+                          "Antihypertensive_treatment")]
+
+CDpwys_CS_12M_CLR$ID <- rownames(CDpwys_CS_12M_CLR)
+Predictor_df <- merge(Predictor_df, CDpwys_CS_12M_CLR)
+CDpwys_CS_12M_CLR$ID <- NULL
+rownames(Predictor_df) <- Predictor_df$ID
+QoL_to_use$ID <- NULL
+
+#Make lists to store results in
+coef_ls_num <- vector("list", ncol(QoL_to_use))
+names(coef_ls_num) <- colnames(QoL_to_use)
+RMSE_Model_results_train <- vector("list", ncol(QoL_to_use))
+names(RMSE_Model_results_train) <- paste("RMSE", colnames(QoL_to_use), sep="_") 
+RMSE_Model_percentage_results_train <- vector("list", ncol(QoL_to_use))
+names(RMSE_Model_percentage_results_train) <- paste("RMSE_percentage", colnames(QoL_to_use), sep="_") 
+RMSE_Model_results_test <- vector("list", ncol(QoL_to_use))
+names(RMSE_Model_results_test) <- paste("RMSE", colnames(QoL_to_use), sep="_") 
+RMSE_Model_percentage_results_test <- vector("list", ncol(QoL_to_use))
+names(RMSE_Model_percentage_results_test) <- paste("RMSE_percentage", colnames(QoL_to_use), sep="_") 
+pred_cor_train_set_r_results <- vector("list", ncol(QoL_to_use))
+names(pred_cor_train_set_r_results) <- paste("Cor_train_set_r", colnames(QoL_to_use), sep="_") 
+pred_cor_train_set_P_results <- vector("list", ncol(QoL_to_use))
+names(pred_cor_train_set_P_results) <- paste("Cor_train_set_P", colnames(QoL_to_use), sep="_") 
+pred_cor_test_set_r_results <- vector("list", ncol(QoL_to_use))
+names(pred_cor_test_set_r_results) <- paste("Cor_test_set_r", colnames(QoL_to_use), sep="_") 
+pred_cor_test_set_P_results <- vector("list", ncol(QoL_to_use))
+names(pred_cor_test_set_P_results) <- paste("Cor_test_set_P", colnames(QoL_to_use), sep="_") 
+QoL_to_use$ID <- rownames(QoL_to_use)
+
+#Run amazing Elastic-Net loop :)
+for(QoLfeature in colnames(QoL_to_use)) {
+  tryCatch({
+    print(QoLfeature)
+    #Create test dataframe with NAs removed
+    Feature_of_interest <- na.omit(QoL_to_use[c(QoLfeature, "ID")])
+    Predictor_test_df <- merge(Feature_of_interest, Predictor_df)
+    rownames(Predictor_test_df) <- Predictor_test_df$ID
+    Predictor_test_df$ID <- NULL
+    
+    #Remove missing predictors
+    Predictor_test_df <- na.omit(Predictor_test_df)
+    #Create Train and Test set
+    responseVar <- QoLfeature
+    inTrain <- createDataPartition(y=Predictor_test_df[[responseVar]],p=0.75,list=F)
+    trainSet <- Predictor_test_df[inTrain,]
+    testSet <- Predictor_test_df[-inTrain,]
+    
+    #Define training scheme
+    trC <- trainControl(method="cv",number=20,repeats = 10,
+                        savePredictions = T,
+                        #classProbs = T,
+                        allowParallel = F)
+    #train Regression example
+    frm <- reformulate(response = responseVar,termlabels = ".")
+    set.seed(100)
+    mdl <- train(frm,
+                 data = trainSet,
+                 trControl = trC,
+                 method="glmnet",
+                 #metric="Accuracy",
+                 family="gaussian",
+                 #family="binomial",
+                 tuneLength = 30
+    )
+    
+    #Prediction
+    print("Predication")
+    testRes <- predict(mdl,newdata = testSet)
+    testRes_train <- predict(mdl,newdata = trainSet)
+    
+    #Model characteristics
+    print("Model characteristics")
+    RMSE_Model_train <- RMSE(trainSet[,1], testRes_train)
+    RMSE_Model_percentage_train <- (RMSE(trainSet[,1], testRes_train))/mean(trainSet[,1])
+    RMSE_Model_test <- RMSE(testSet[,1], testRes)
+    RMSE_Model_percentage_test <- (RMSE(testSet[,1], testRes))/mean(testSet[,1])
+    
+    
+    
+    #Find correlation between predicted and observed in training set
+    pred_cor_train_set <- cor.test(trainSet[,1], testRes_train)
+    pred_cor_train_set_r <- pred_cor_train_set$estimate
+    pred_cor_train_set_P <- pred_cor_train_set$p.value
+    #Find correlation between predicted and observed in testing set
+    pred_cor_test_set <- cor.test(testSet[,1], testRes)
+    pred_cor_test_set_r <- pred_cor_test_set$estimate
+    pred_cor_test_set_P <- pred_cor_test_set$p.value
+    
+    print("Extracting model")
+    # extract coefficients
+    # lambda & alpha
+    mdl$bestTune
+    # actual coefs
+    coefs <- coef(mdl$finalModel,mdl$bestTune$lambda)
+    coefs_best_model <- as.data.frame(as.matrix(coefs))
+    colnames(coefs_best_model) <- paste("coef", QoLfeature, sep="_")
+    #coefs_best_model$Covariate <- rownames(coefs_best_model)
+    #Store in list
+    RMSE_Model_results_train[[QoLfeature]] <- RMSE_Model_train
+    RMSE_Model_percentage_results_train[[QoLfeature]] <- RMSE_Model_percentage_train
+    RMSE_Model_results_test[[QoLfeature]] <- RMSE_Model_test
+    RMSE_Model_percentage_results_test[[QoLfeature]] <- RMSE_Model_percentage_test
+    pred_cor_train_set_r_results[[QoLfeature]] <- pred_cor_train_set_r
+    pred_cor_train_set_P_results[[QoLfeature]] <- pred_cor_train_set_P
+    pred_cor_test_set_r_results[[QoLfeature]] <- pred_cor_test_set_r
+    pred_cor_test_set_P_results[[QoLfeature]] <- pred_cor_test_set_P
+    coef_ls_num[[QoLfeature]] <- coefs_best_model
+  }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
+}
+
+Elastic_Net_results <- coef_ls_num %>%
+  bind_cols()
+Elastic_Net_results$Feature <- rownames(Elastic_Net_results)
+Elastic_Net_results <- Elastic_Net_results[,c(ncol(Elastic_Net_results),1:ncol(Elastic_Net_results)-1)]
+saveRDS(Elastic_Net_results, "Elastic_Net_Pathways_Numerical_results_df.rds")
+write.xlsx(Elastic_Net_results, "Elastic_Net_Pathways_Numerical_results_df.xlsx")
+
+#Model metrics
+#RMSE Train
+RMSE_Model_results_train_df <- RMSE_Model_results_train %>%
+  bind_rows()
+RMSE_Model_results_train_df <- as.data.frame(t.data.frame(RMSE_Model_results_train_df))
+colnames(RMSE_Model_results_train_df) <- c("RSME_train")
+saveRDS(RMSE_Model_results_train_df, "RMSE_Pathways_Model_results_train_df.rds")
+
+RMSE_Model_percentage_train_df <- RMSE_Model_percentage_results_train %>%
+  bind_rows()
+RMSE_Model_percentage_train_df <- as.data.frame(t.data.frame(RMSE_Model_percentage_train_df))
+colnames(RMSE_Model_percentage_train_df) <- c("RSME_percentage_train")
+saveRDS(RMSE_Model_percentage_train_df, "RMSE_Pathways_Model_percentage_train_df.rds")
+
+#RMSE Train
+RMSE_Model_results_test_df <- RMSE_Model_results_test %>%
+  bind_rows()
+RMSE_Model_results_test_df <- as.data.frame(t.data.frame(RMSE_Model_results_test_df))
+colnames(RMSE_Model_results_test_df) <- c("RSME_test")
+saveRDS(RMSE_Model_results_test_df, "RMSE_Pathways_Model_results_test_df.rds")
+
+RMSE_Model_percentage_test_df <- RMSE_Model_percentage_results_test %>%
+  bind_rows()
+RMSE_Model_percentage_test_df <- as.data.frame(t.data.frame(RMSE_Model_percentage_test_df))
+colnames(RMSE_Model_percentage_test_df) <- c("RSME_percentage_test")
+saveRDS(RMSE_Model_percentage_test_df, "RMSE_Pathways_Model_percentage_test_df.rds")
+
+pred_cor_train_set_r_df <- pred_cor_train_set_r_results %>%
+  bind_cols()
+pred_cor_train_set_r_df <- as.data.frame(t.data.frame(pred_cor_train_set_r_df))
+colnames(pred_cor_train_set_r_df) <- c("Cor_train_set_r")
+saveRDS(pred_cor_train_set_r_df, "pred_cor_Pathways_train_set_r_df.rds")
+
+pred_cor_train_set_P_df <- pred_cor_train_set_P_results %>%
+  bind_rows()
+pred_cor_train_set_P_df <- as.data.frame(t.data.frame(pred_cor_train_set_P_df))
+colnames(pred_cor_train_set_P_df) <- c("Cor_train_set_P")
+saveRDS(pred_cor_train_set_P_df, "pred_cor_Pathways_train_set_P_df.rds")
+
+pred_cor_test_set_r_df <- pred_cor_test_set_r_results %>%
+  bind_rows()
+pred_cor_test_set_r_df <- as.data.frame(t.data.frame(pred_cor_test_set_r_df))
+colnames(pred_cor_test_set_r_df) <- c("Cor_test_set_r")
+saveRDS(pred_cor_test_set_r_df, "pred_cor_Pathways_test_set_r_df.rds")
+
+pred_cor_test_set_P_df <- pred_cor_test_set_P_results %>%
+  bind_rows()
+pred_cor_test_set_P_df <- as.data.frame(t.data.frame(pred_cor_test_set_P_df))
+colnames(pred_cor_test_set_P_df) <- c("Cor_test_set_P")
+saveRDS(pred_cor_test_set_P_df, "pred_cor_Pathways_test_set_P_df.rds")
+
+```
+```{r}
+#Loop Elastic-Net models - Pathways - categorical ----
+QoL_to_use <-   QoLMeta[c("ID",
+                          #Mental
+                          "Antidepressant",
+                          "Severe_Fatigue",
+                          "major_depression",
+                          "anxiety")]
+rownames(QoL_to_use) <- QoL_to_use$ID
+QoL_to_use$Clinical_Fr_Score_2 <- QoL_to_use$Clinical_Fr_Score_3
+levels(QoL_to_use$Clinical_Fr_Score_2) <- c("Well", "Frail", "Frail")
+summary(QoL_to_use$Clinical_Fr_Score_2)
+QoL_to_use$Severe_Fatigue <- as.factor(QoL_to_use$Severe_Fatigue)
+levels(QoL_to_use$Severe_Fatigue) <- c("No severe fatigue", "Severe fatigue")
+summary(QoL_to_use$Severe_Fatigue)
+QoL_to_use$Physical_activity_score <- as.factor(QoL_to_use$Physical_activity_score)
+summary(QoL_to_use$Physical_activity_score)
+
+# Species - Taxon-specific linear models 
+CDpwys_CS_12M_CLR$ID <- rownames(CDpwys_CS_12M_CLR)
+Test_elastic_net_transplantlines <- merge(QoL_to_use, CDpwys_CS_12M_CLR)
+rownames(Test_elastic_net_transplantlines) <- Test_elastic_net_transplantlines$ID
+Test_elastic_net_transplantlines$ID <- NULL
+
+
+#Make a list for results
+Predictor_df <- QoLMeta[c("ID",
+                          #Confounders
+                          "Age",
+                          "Sex",
+                          "BMI",
+                          "PPI",
+                          "Laxative",
+                          "Antibiotics",
+                          "Dialysis",
+                          "eGFR",
+                          "Diabetes",
+                          "Antihypertensive_treatment")]
+
+
+Predictor_df <- merge(Predictor_df, CDpwys_CS_12M_CLR)
+CDpwys_CS_12M_CLR$ID <- NULL
+rownames(Predictor_df) <- Predictor_df$ID
+QoL_to_use$ID <- NULL
+
+#Make lists to store results in
+coef_ls_num <- vector("list", ncol(QoL_to_use))
+names(coef_ls_num) <- colnames(QoL_to_use)
+Accuracy_Model_results_train <- vector("list", ncol(QoL_to_use))
+names(Accuracy_Model_results_train) <- paste("Accuracy", colnames(QoL_to_use), sep="_") 
+Accuracy_Model_results_test <- vector("list", ncol(QoL_to_use))
+names(Accuracy_Model_results_test) <- paste("Accuracy", colnames(QoL_to_use), sep="_") 
+
+QoL_to_use$ID <- rownames(QoL_to_use)
+
+#Run amazing Elastic-Net loop :)
+for(QoLfeature in colnames(QoL_to_use)) {
+  tryCatch({
+    print(QoLfeature)
+    #Create test dataframe with NAs removed
+    Feature_of_interest <- na.omit(QoL_to_use[c(QoLfeature, "ID")])
+    Predictor_test_df <- merge(Feature_of_interest, Predictor_df)
+    rownames(Predictor_test_df) <- Predictor_test_df$ID
+    Predictor_test_df$ID <- NULL
+    
+    #Remove missing predictors
+    Predictor_test_df <- na.omit(Predictor_test_df)
+    #Create Train and Test set
+    responseVar <- QoLfeature
+    inTrain <- createDataPartition(y=Predictor_test_df[[responseVar]],p=0.75,list=F)
+    trainSet <- Predictor_test_df[inTrain,]
+    testSet <- Predictor_test_df[-inTrain,]
+    
+    #Define training scheme
+    trC <- trainControl(method="cv",number=20,repeats = 10,
+                        savePredictions = T,
+                        #classProbs = T,
+                        allowParallel = F)
+    #train Regression example
+    frm <- reformulate(response = responseVar,termlabels = ".")
+    set.seed(100)
+    mdl <- train(frm,
+                 data = trainSet,
+                 trControl = trC,
+                 method="glmnet",
+                 metric="Accuracy",
+                 family="binomial",
+                 tuneLength = 30, 
+                 savePredictions =T)
+    #Prediction
+    print("Predication")
+    testRes <- predict(mdl,newdata = testSet)
+    testRes_train <- predict(mdl,newdata = trainSet)
+    
+    #Model Metrics
+    print("Model Metrics")
+    confusionMatrix_train <- confusionMatrix(data = testRes_train,reference = as.factor(as.character(trainSet[,1])))
+    Accuracy_train_value <- confusionMatrix_train$overall[1]
+    Accuracy_train_value <- gsub("Accuracy", "", Accuracy_train_value)
+    confusionMatrix_test <- confusionMatrix(data = testRes,reference = as.factor(as.character(testSet[,1])))
+    Accuracy_test_value <- confusionMatrix_test$overall[1]
+    Accuracy_test_value <- gsub("Accuracy", "", Accuracy_test_value)
+    
+    print("Extracting model")
+    # extract coefficients
+    # lambda & alpha
+    mdl$bestTune
+    # actual coefs
+    coefs <- coef(mdl$finalModel,mdl$bestTune$lambda)
+    coefs_best_model <- as.data.frame(as.matrix(coefs))
+    colnames(coefs_best_model) <- paste("coef", QoLfeature, sep="_")
+    #coefs_best_model$Covariate <- rownames(coefs_best_model)
+    #Store in list
+    Accuracy_Model_results_train[[QoLfeature]] <- Accuracy_train_value
+    Accuracy_Model_results_test[[QoLfeature]] <-  Accuracy_test_value
+    coef_ls_num[[QoLfeature]] <- coefs_best_model
+  }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
+}
+
+Elastic_Net_results <- coef_ls_num %>%
+  bind_cols()
+Elastic_Net_results$Feature <- rownames(Elastic_Net_results)
+Elastic_Net_results <- Elastic_Net_results[,c(ncol(Elastic_Net_results),1:ncol(Elastic_Net_results)-1)]
+
+saveRDS(Elastic_Net_results, "Elastic_Pathways_Net_Categorical_results_df.rds")
+write.xlsx(Elastic_Net_results, "Elastic_Pathways_Net_Categorical_results_df.xlsx")
+
+#Model metrics
+Accuracy_Model_results_train_df <- Accuracy_Model_results_train %>%
+  bind_rows()
+Accuracy_Model_results_train_df <- as.data.frame(t.data.frame(Accuracy_Model_results_train_df))
+colnames(Accuracy_Model_results_train_df) <- c("Accuracy_train")
+Accuracy_Model_results_train_df$Feature <- rownames(Accuracy_Model_results_train_df)
+
+saveRDS(Accuracy_Model_results_train_df, "Accuracy_trainset_Pathways_Categorical_results_df.rds")
+
+Accuracy_Model_results_test_df <- Accuracy_Model_results_test %>%
+  bind_rows()
+Accuracy_Model_results_test_df <- as.data.frame(t.data.frame(Accuracy_Model_results_test_df))
+colnames(Accuracy_Model_results_test_df) <- c("Accuracy_test")
+Accuracy_Model_results_test_df$Feature <- rownames(Accuracy_Model_results_test_df)
+
+saveRDS(Accuracy_Model_results_test_df, "Accuracy_Pathways_testset_Categorical_results_df.rds")
+
+
+```
+```{r}
+#Loop Elastic-Net models - GBM - numerical ----
+QoL_to_use <-   QoLMeta[c("ID",
+         #RAND36
+         "R_Physical_Functioning",
+         "R_Social_Functioning",
+         "R_Physical_Restrain",
+         "R_Emotional_Restrain",
+         "R_Mental_Health",
+         "R_Vitality",
+         "R_Pain",
+         "R_General_Health_Attribution",
+         "Physical_Component_Scale",
+         "Mental_Component_Scale",
+         #Physical
+         "Max_HGT",
+         "min_STST",
+         "Min_TUG",
+         "Min_4mWT",
+         "FYSWLK2MDIST",
+         "Physical_activity_score")]
+rownames(QoL_to_use) <- QoL_to_use$ID
+
+
+# Species - Taxon-specific linear models 
+Neuroactive_pot_gut_brain_modules_CLR$ID <- rownames(Neuroactive_pot_gut_brain_modules_CLR)
+Test_elastic_net_transplantlines <- merge(QoL_to_use, Neuroactive_pot_gut_brain_modules_CLR)
+
+rownames(Test_elastic_net_transplantlines) <- Test_elastic_net_transplantlines$ID
+Test_elastic_net_transplantlines$ID <- NULL
+
+
+#Make a list for results
+Predictor_df <- QoLMeta[c("ID",
+                          #Confounders
+                          "Age",
+                          "Sex",
+                          "BMI",
+                          "PPI",
+                          "Laxative",
+                          "Antibiotics",
+                          "Dialysis",
+                          "eGFR",
+                          "Diabetes",
+                          "Antihypertensive_treatment")]
+
+Neuroactive_pot_gut_brain_modules_CLR$ID <- rownames(Neuroactive_pot_gut_brain_modules_CLR)
+Predictor_df <- merge(Predictor_df, Neuroactive_pot_gut_brain_modules_CLR)
+Neuroactive_pot_gut_brain_modules_CLR$ID <- NULL
+rownames(Predictor_df) <- Predictor_df$ID
+QoL_to_use$ID <- NULL
+
+
+
+#Make lists to store results in
+coef_ls_num <- vector("list", ncol(QoL_to_use))
+names(coef_ls_num) <- colnames(QoL_to_use)
+RMSE_Model_results_train <- vector("list", ncol(QoL_to_use))
+names(RMSE_Model_results_train) <- paste("RMSE", colnames(QoL_to_use), sep="_") 
+RMSE_Model_percentage_results_train <- vector("list", ncol(QoL_to_use))
+names(RMSE_Model_percentage_results_train) <- paste("RMSE_percentage", colnames(QoL_to_use), sep="_") 
+RMSE_Model_results_test <- vector("list", ncol(QoL_to_use))
+names(RMSE_Model_results_test) <- paste("RMSE", colnames(QoL_to_use), sep="_") 
+RMSE_Model_percentage_results_test <- vector("list", ncol(QoL_to_use))
+names(RMSE_Model_percentage_results_test) <- paste("RMSE_percentage", colnames(QoL_to_use), sep="_") 
+pred_cor_train_set_r_results <- vector("list", ncol(QoL_to_use))
+names(pred_cor_train_set_r_results) <- paste("Cor_train_set_r", colnames(QoL_to_use), sep="_") 
+pred_cor_train_set_P_results <- vector("list", ncol(QoL_to_use))
+names(pred_cor_train_set_P_results) <- paste("Cor_train_set_P", colnames(QoL_to_use), sep="_") 
+pred_cor_test_set_r_results <- vector("list", ncol(QoL_to_use))
+names(pred_cor_test_set_r_results) <- paste("Cor_test_set_r", colnames(QoL_to_use), sep="_") 
+pred_cor_test_set_P_results <- vector("list", ncol(QoL_to_use))
+names(pred_cor_test_set_P_results) <- paste("Cor_test_set_P", colnames(QoL_to_use), sep="_") 
+QoL_to_use$ID <- rownames(QoL_to_use)
+
+#Run amazing Elastic-Net loop :)
+for(QoLfeature in colnames(QoL_to_use)) {
+  tryCatch({
+    print(QoLfeature)
+    #Create test dataframe with NAs removed
+    Feature_of_interest <- na.omit(QoL_to_use[c(QoLfeature, "ID")])
+    Predictor_test_df <- merge(Feature_of_interest, Predictor_df)
+    rownames(Predictor_test_df) <- Predictor_test_df$ID
+    Predictor_test_df$ID <- NULL
+    
+    #Remove missing predictors
+    Predictor_test_df <- na.omit(Predictor_test_df)
+    #Create Train and Test set
+    responseVar <- QoLfeature
+    inTrain <- createDataPartition(y=Predictor_test_df[[responseVar]],p=0.75,list=F)
+    trainSet <- Predictor_test_df[inTrain,]
+    testSet <- Predictor_test_df[-inTrain,]
+    
+    #Define training scheme
+    trC <- trainControl(method="cv",number=20,repeats = 10,
+                        savePredictions = T,
+                        #classProbs = T,
+                        allowParallel = F)
+    #train Regression example
+    frm <- reformulate(response = responseVar,termlabels = ".")
+    set.seed(100)
+    mdl <- train(frm,
+                 data = trainSet,
+                 trControl = trC,
+                 method="glmnet",
+                 #metric="Accuracy",
+                 family="gaussian",
+                 #family="binomial",
+                 tuneLength = 30
+    )
+    
+    #Prediction
+    print("Predication")
+    testRes <- predict(mdl,newdata = testSet)
+    testRes_train <- predict(mdl,newdata = trainSet)
+    
+    #Model characteristics
+    print("Model characteristics")
+    RMSE_Model_train <- RMSE(trainSet[,1], testRes_train)
+    RMSE_Model_percentage_train <- (RMSE(trainSet[,1], testRes_train))/mean(trainSet[,1])
+    RMSE_Model_test <- RMSE(testSet[,1], testRes)
+    RMSE_Model_percentage_test <- (RMSE(testSet[,1], testRes))/mean(testSet[,1])
+    
+    
+    
+    #Find correlation between predicted and observed in training set
+    pred_cor_train_set <- cor.test(trainSet[,1], testRes_train)
+    pred_cor_train_set_r <- pred_cor_train_set$estimate
+    pred_cor_train_set_P <- pred_cor_train_set$p.value
+    #Find correlation between predicted and observed in testing set
+    pred_cor_test_set <- cor.test(testSet[,1], testRes)
+    pred_cor_test_set_r <- pred_cor_test_set$estimate
+    pred_cor_test_set_P <- pred_cor_test_set$p.value
+    
+    print("Extracting model")
+    # extract coefficients
+    # lambda & alpha
+    mdl$bestTune
+    # actual coefs
+    coefs <- coef(mdl$finalModel,mdl$bestTune$lambda)
+    coefs_best_model <- as.data.frame(as.matrix(coefs))
+    colnames(coefs_best_model) <- paste("coef", QoLfeature, sep="_")
+    #coefs_best_model$Covariate <- rownames(coefs_best_model)
+    #Store in list
+    RMSE_Model_results_train[[QoLfeature]] <- RMSE_Model_train
+    RMSE_Model_percentage_results_train[[QoLfeature]] <- RMSE_Model_percentage_train
+    RMSE_Model_results_test[[QoLfeature]] <- RMSE_Model_test
+    RMSE_Model_percentage_results_test[[QoLfeature]] <- RMSE_Model_percentage_test
+    pred_cor_train_set_r_results[[QoLfeature]] <- pred_cor_train_set_r
+    pred_cor_train_set_P_results[[QoLfeature]] <- pred_cor_train_set_P
+    pred_cor_test_set_r_results[[QoLfeature]] <- pred_cor_test_set_r
+    pred_cor_test_set_P_results[[QoLfeature]] <- pred_cor_test_set_P
+    coef_ls_num[[QoLfeature]] <- coefs_best_model
+  }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
+}
+
+Elastic_Net_results <- coef_ls_num %>%
+  bind_cols()
+Elastic_Net_results$Feature <- rownames(Elastic_Net_results)
+Elastic_Net_results <- Elastic_Net_results[,c(ncol(Elastic_Net_results),1:ncol(Elastic_Net_results)-1)]
+saveRDS(Elastic_Net_results, "Elastic_Net_GBM_Numerical_results_df.rds")
+write.xlsx(Elastic_Net_results, "Elastic_Net_GBM_Numerical_results_df.xlsx")
+
+#Model metrics
+#RMSE Train
+RMSE_Model_results_train_df <- RMSE_Model_results_train %>%
+  bind_rows()
+RMSE_Model_results_train_df <- as.data.frame(t.data.frame(RMSE_Model_results_train_df))
+colnames(RMSE_Model_results_train_df) <- c("RSME_train")
+saveRDS(RMSE_Model_results_train_df, "RMSE_GBM_Model_results_train_df.rds")
+
+RMSE_Model_percentage_train_df <- RMSE_Model_percentage_results_train %>%
+  bind_rows()
+RMSE_Model_percentage_train_df <- as.data.frame(t.data.frame(RMSE_Model_percentage_train_df))
+colnames(RMSE_Model_percentage_train_df) <- c("RSME_percentage_train")
+saveRDS(RMSE_Model_percentage_train_df, "RMSE_GBM_Model_percentage_train_df.rds")
+
+#RMSE Train
+RMSE_Model_results_test_df <- RMSE_Model_results_test %>%
+  bind_rows()
+RMSE_Model_results_test_df <- as.data.frame(t.data.frame(RMSE_Model_results_test_df))
+colnames(RMSE_Model_results_test_df) <- c("RSME_test")
+saveRDS(RMSE_Model_results_test_df, "RMSE_GBM_Model_results_test_df.rds")
+
+RMSE_Model_percentage_test_df <- RMSE_Model_percentage_results_test %>%
+  bind_rows()
+RMSE_Model_percentage_test_df <- as.data.frame(t.data.frame(RMSE_Model_percentage_test_df))
+colnames(RMSE_Model_percentage_test_df) <- c("RSME_percentage_test")
+saveRDS(RMSE_Model_percentage_test_df, "RMSE_GBM_Model_percentage_test_df.rds")
+
+pred_cor_train_set_r_df <- pred_cor_train_set_r_results %>%
+  bind_cols()
+pred_cor_train_set_r_df <- as.data.frame(t.data.frame(pred_cor_train_set_r_df))
+colnames(pred_cor_train_set_r_df) <- c("Cor_train_set_r")
+saveRDS(pred_cor_train_set_r_df, "pred_cor_GBM_train_set_r_df.rds")
+
+pred_cor_train_set_P_df <- pred_cor_train_set_P_results %>%
+  bind_rows()
+pred_cor_train_set_P_df <- as.data.frame(t.data.frame(pred_cor_train_set_P_df))
+colnames(pred_cor_train_set_P_df) <- c("Cor_train_set_P")
+saveRDS(pred_cor_train_set_P_df, "pred_cor_GBM_train_set_P_df.rds")
+
+pred_cor_test_set_r_df <- pred_cor_test_set_r_results %>%
+  bind_rows()
+pred_cor_test_set_r_df <- as.data.frame(t.data.frame(pred_cor_test_set_r_df))
+colnames(pred_cor_test_set_r_df) <- c("Cor_test_set_r")
+saveRDS(pred_cor_test_set_r_df, "pred_cor_GBM_test_set_r_df.rds")
+
+pred_cor_test_set_P_df <- pred_cor_test_set_P_results %>%
+  bind_rows()
+pred_cor_test_set_P_df <- as.data.frame(t.data.frame(pred_cor_test_set_P_df))
+colnames(pred_cor_test_set_P_df) <- c("Cor_test_set_P")
+saveRDS(pred_cor_test_set_P_df, "pred_cor_GBM_test_set_P_df.rds")
+
+```
+```{r}
+#Loop Elastic-Net models - GBM - categorical ----
+QoL_to_use <-   QoLMeta[c("ID",
+                          #Mental
+                          "Antidepressant",
+                          "Severe_Fatigue",
+                          "major_depression",
+                          "anxiety")]
+rownames(QoL_to_use) <- QoL_to_use$ID
+QoL_to_use$Clinical_Fr_Score_2 <- QoL_to_use$Clinical_Fr_Score_3
+levels(QoL_to_use$Clinical_Fr_Score_2) <- c("Well", "Frail", "Frail")
+summary(QoL_to_use$Clinical_Fr_Score_2)
+QoL_to_use$Severe_Fatigue <- as.factor(QoL_to_use$Severe_Fatigue)
+levels(QoL_to_use$Severe_Fatigue) <- c("No severe fatigue", "Severe fatigue")
+summary(QoL_to_use$Severe_Fatigue)
+QoL_to_use$Physical_activity_score <- as.factor(QoL_to_use$Physical_activity_score)
+summary(QoL_to_use$Physical_activity_score)
+
+# Species - Taxon-specific linear models 
+Neuroactive_pot_gut_brain_modules_CLR$ID <- rownames(Neuroactive_pot_gut_brain_modules_CLR)
+Test_elastic_net_transplantlines <- merge(QoL_to_use, Neuroactive_pot_gut_brain_modules_CLR)
+rownames(Test_elastic_net_transplantlines) <- Test_elastic_net_transplantlines$ID
+Test_elastic_net_transplantlines$ID <- NULL
+
+
+#Make a list for results
+Predictor_df <- QoLMeta[c("ID",
+                          #Confounders
+                          "Age",
+                          "Sex",
+                          "BMI",
+                          "PPI",
+                          "Laxative",
+                          "Antibiotics",
+                          "Dialysis",
+                          "eGFR",
+                          "Diabetes",
+                          "Antihypertensive_treatment")]
+
+
+Predictor_df <- merge(Predictor_df, Neuroactive_pot_gut_brain_modules_CLR)
+Neuroactive_pot_gut_brain_modules_CLR$ID <- NULL
+rownames(Predictor_df) <- Predictor_df$ID
+QoL_to_use$ID <- NULL
+
+#Make lists to store results in
+coef_ls_num <- vector("list", ncol(QoL_to_use))
+names(coef_ls_num) <- colnames(QoL_to_use)
+Accuracy_Model_results_train <- vector("list", ncol(QoL_to_use))
+names(Accuracy_Model_results_train) <- paste("Accuracy", colnames(QoL_to_use), sep="_") 
+Accuracy_Model_results_test <- vector("list", ncol(QoL_to_use))
+names(Accuracy_Model_results_test) <- paste("Accuracy", colnames(QoL_to_use), sep="_") 
+
+QoL_to_use$ID <- rownames(QoL_to_use)
+
+#Run amazing Elastic-Net loop :)
+for(QoLfeature in colnames(QoL_to_use)) {
+  tryCatch({
+    print(QoLfeature)
+    #Create test dataframe with NAs removed
+    Feature_of_interest <- na.omit(QoL_to_use[c(QoLfeature, "ID")])
+    Predictor_test_df <- merge(Feature_of_interest, Predictor_df)
+    rownames(Predictor_test_df) <- Predictor_test_df$ID
+    Predictor_test_df$ID <- NULL
+    
+    #Remove missing predictors
+    Predictor_test_df <- na.omit(Predictor_test_df)
+    #Create Train and Test set
+    responseVar <- QoLfeature
+    inTrain <- createDataPartition(y=Predictor_test_df[[responseVar]],p=0.75,list=F)
+    trainSet <- Predictor_test_df[inTrain,]
+    testSet <- Predictor_test_df[-inTrain,]
+    
+    #Define training scheme
+    trC <- trainControl(method="cv",number=20,repeats = 10,
+                        savePredictions = T,
+                        #classProbs = T,
+                        allowParallel = F)
+    #train Regression example
+    frm <- reformulate(response = responseVar,termlabels = ".")
+    set.seed(100)
+    mdl <- train(frm,
+                 data = trainSet,
+                 trControl = trC,
+                 method="glmnet",
+                 metric="Accuracy",
+                 family="binomial",
+                 tuneLength = 30, 
+                 savePredictions =T)
+    #Prediction
+    print("Predication")
+    testRes <- predict(mdl,newdata = testSet)
+    testRes_train <- predict(mdl,newdata = trainSet)
+    
+    #Model Metrics
+    print("Model Metrics")
+    confusionMatrix_train <- confusionMatrix(data = testRes_train,reference = as.factor(as.character(trainSet[,1])))
+    Accuracy_train_value <- confusionMatrix_train$overall[1]
+    Accuracy_train_value <- gsub("Accuracy", "", Accuracy_train_value)
+    confusionMatrix_test <- confusionMatrix(data = testRes,reference = as.factor(as.character(testSet[,1])))
+    Accuracy_test_value <- confusionMatrix_test$overall[1]
+    Accuracy_test_value <- gsub("Accuracy", "", Accuracy_test_value)
+    
+    print("Extracting model")
+    # extract coefficients
+    # lambda & alpha
+    mdl$bestTune
+    # actual coefs
+    coefs <- coef(mdl$finalModel,mdl$bestTune$lambda)
+    coefs_best_model <- as.data.frame(as.matrix(coefs))
+    colnames(coefs_best_model) <- paste("coef", QoLfeature, sep="_")
+    #coefs_best_model$Covariate <- rownames(coefs_best_model)
+    #Store in list
+    Accuracy_Model_results_train[[QoLfeature]] <- Accuracy_train_value
+    Accuracy_Model_results_test[[QoLfeature]] <-  Accuracy_test_value
+    coef_ls_num[[QoLfeature]] <- coefs_best_model
+  }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
+}
+
+Elastic_Net_results <- coef_ls_num %>%
+  bind_cols()
+Elastic_Net_results$Feature <- rownames(Elastic_Net_results)
+Elastic_Net_results <- Elastic_Net_results[,c(ncol(Elastic_Net_results),1:ncol(Elastic_Net_results)-1)]
+
+saveRDS(Elastic_Net_results, "Elastic_GBM_Net_Categorical_results_df.rds")
+write.xlsx(Elastic_Net_results, "Elastic_GBM_Net_Categorical_results_df.xlsx")
+
+#Model metrics
+Accuracy_Model_results_train_df <- Accuracy_Model_results_train %>%
+  bind_rows()
+Accuracy_Model_results_train_df <- as.data.frame(t.data.frame(Accuracy_Model_results_train_df))
+colnames(Accuracy_Model_results_train_df) <- c("Accuracy_train")
+Accuracy_Model_results_train_df$Feature <- rownames(Accuracy_Model_results_train_df)
+
+saveRDS(Accuracy_Model_results_train_df, "Accuracy_trainset_GBM_Categorical_results_df.rds")
+
+Accuracy_Model_results_test_df <- Accuracy_Model_results_test %>%
+  bind_rows()
+Accuracy_Model_results_test_df <- as.data.frame(t.data.frame(Accuracy_Model_results_test_df))
+colnames(Accuracy_Model_results_test_df) <- c("Accuracy_test")
+Accuracy_Model_results_test_df$Feature <- rownames(Accuracy_Model_results_test_df)
+
+saveRDS(Accuracy_Model_results_test_df, "Accuracy_GBM_testset_Categorical_results_df.rds")
+```

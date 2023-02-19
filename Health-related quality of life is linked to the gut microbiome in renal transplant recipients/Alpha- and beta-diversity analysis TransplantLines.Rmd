@@ -1,0 +1,333 @@
+---
+title: "Alpha- and beta-diversity analysis for HRQoL - Gut microbiome TransplantLines"
+author: J.C. Swarte
+output: html_notebook
+# ==========================================================================================
+#                       By: Weersma Group, TransplantLines (UMCG)
+#
+#                       UMCG Transplantlines Project data analysis
+# ==========================================================================================
+#
+#               Alpha- and beta-diversity analysis for HRQoL - Gut microbiome
+#
+# ==========================================================================================
+#
+# NOTE: This is implementation on Mock Data published in this github repo, and is intended 
+# for demonstration purposes only, the results are not identical to Figures in the manuscript
+#
+# NOTE2: Codes are intended to be run from root of this github repo, if running them from 
+# different location, make sure to adjust setwd to appropriate location 
+# (root of this github repo)
+#
+# ==========================================================================================
+#
+# make sure following packages are installed:
+# install.packages(c("foreign", "tidyverse", "ggplot2", "ggsignif", "vegan", "xlsx", "ggpubr", "psych", "RColorBrewer", #"corrplot", "lmtest", "patchwork", "Hmisc", "naniar", "QuantPsyc", "caret", "glmnet", "insight", "mediation", "cowplot"))
+
+# ==========================================================================================
+---
+```{r}
+#Load packages 
+library(foreign)
+library(tidyverse)
+library(ggplot2)
+library(ggsignif)
+library(vegan)
+library(xlsx)
+library(ggpubr)
+library(psych)
+library(RColorBrewer)
+library(corrplot)
+library(lmtest)
+library(patchwork)
+library(Hmisc)
+library(naniar)
+library(QuantPsyc)
+library(caret)
+library(glmnet)
+library(insight)
+library(mediation)
+library(cowplot)
+```
+```{r}
+#Load Data ----
+QoLMeta <- readRDS("~/Meta_final_randomized.RDS")
+spDF_CS_12M_CLR <- readRDS("~/spDF_randomized.RDS")
+DAG3Healthy <- readRDS("~/DMP Disease Comparison.rds")
+```
+```{r}
+#Principal component analysis ----
+Aitchinson <- prcomp(spDF_CS_12M_CLR)
+AitchinsonDF <- as.data.frame(Aitchinson$x)
+AitchinsonDF <- merge(AitchinsonDF, QoLMeta, by="row.names")
+summary <- summary(Aitchinson)
+variance <- summary$importance[2,]
+
+var_PC1 <- as.integer(variance[1]*100)
+var_PC2 <- as.integer(variance[2]*100)
+var_PC3 <- as.integer(variance[3]*100)
+var_PC4 <- as.integer(variance[4]*100)
+var_PC5 <- as.integer(variance[5]*100)
+
+#Get extra info regarding PCA
+spDF_CS_12M_CLR_names <- spDF_CS_12M_CLR
+colnames(spDF_CS_12M_CLR_names) <- str_split_fixed(colnames(spDF_CS_12M_CLR_names), "\\.", 7)[,7]
+colnames(spDF_CS_12M_CLR_names) <- gsub("s__", "",colnames(spDF_CS_12M_CLR_names))
+colnames(spDF_CS_12M_CLR_names) <- gsub("_", " ",colnames(spDF_CS_12M_CLR_names))
+Aitchinson <- prcomp(spDF_CS_12M_CLR_names)
+
+
+#Select Healthy/unhealthy species DAG3
+tspDF_CS_12M_CLR_names <- as.data.frame(t.data.frame(spDF_CS_12M_CLR_names))
+tspDF_CS_12M_CLR_names$Taxon <- rownames(tspDF_CS_12M_CLR_names)
+DAG3HealthySpecies <- left_join(DAG3Healthy, tspDF_CS_12M_CLR_names, by="Taxon")
+rownames(DAG3HealthySpecies) <- DAG3HealthySpecies$TaxonHealthy
+DAG3HealthySpecies$Taxon <- NULL
+DAG3HealthySpecies$Unhealthy_Direction_Gacesa <- NULL
+DAG3HealthySpecies$TaxonHealthy <- NULL
+DAG3HealthySpecies <- as.data.frame(t.data.frame(DAG3HealthySpecies))
+DAG3HealthySpecies$ID <- rownames(DAG3HealthySpecies)
+PCs <- AitchinsonDF[c("ID","PC1", "PC2", "PC3", "PC4", "PC5")]
+DAG3HealthySpeciesPCs <- merge(DAG3HealthySpecies, PCs, by="ID")
+rownames(DAG3HealthySpeciesPCs) <- DAG3HealthySpeciesPCs$ID
+DAG3HealthySpeciesPCs$ID <- NULL
+DAG3HealthySpeciesPCs
+DAG3HealthySpeciesPCs <- DAG3HealthySpeciesPCs[ , colSums(is.na(DAG3HealthySpeciesPCs)) < nrow(DAG3HealthySpeciesPCs)]
+CorrelationMatrix<-rcorr(as.matrix(DAG3HealthySpeciesPCs), type = "spearman")
+
+#pdf(file="J:/Metagenomic sequencing/QoL/PCA Aitchison/Correlations_PCs_Species.pdf", h=25, w=25)
+corrplot::corrplot(CorrelationMatrix$r, p.mat=CorrelationMatrix$P, type="full",sig.level = 0.05, insig="blank", method="color", 
+                   addgrid.col = 'black', number.cex=0.3, tl.col = "black", is.corr = T, , col=rev(COL2('RdBu', 200)))
+#dev.off()
+```
+```{r}
+#PC1 vs PC2
+PCA12 <- ggplot(AitchinsonDF,aes_string(x="PC1",y="PC2",col="Physical_Component_Scale_quartile")) + geom_point(size=3,alpha=0.4)+
+  xlab(paste0("PC1, ",var_PC1,"% variance")) + 
+  ylab(paste0("PC2, ",var_PC2,"% variance"))+
+  theme_classic()+ 
+  theme(
+    axis.title.x = element_text(size=14, face="bold", colour = "black"),
+    axis.title.y = element_text(size=14, face="bold", colour = "black"),
+    axis.text.x = element_text(size=14, face="bold", colour = "black"),
+    axis.text.y = element_text(size=14, face="bold", colour = "black"))+
+  theme(legend.text = element_text(face = "bold", size=12),
+        legend.title = element_blank(),
+        plot.title=element_text(face = "bold",hjust=0.5))+
+  scale_color_manual(values = c("Q1"="#03045e", "Q2"="#ffb703", "Q3"="red", "Q4"="#3F612D"))
+ref <- reformulate("Physical_Component_Scale_quartile","cbind(PC1,PC2)")
+centroids <- aggregate(ref,AitchinsonDF,mean)
+PCA12 <- PCA12 + geom_point(data=centroids,shape=16,stroke=3,size=4,aes_string(x="PC1",y="PC2"),alpha=1) +
+  geom_point(data=centroids,shape=21,stroke=2,size=4,aes_string(x="PC1",y="PC2",col="Physical_Component_Scale_quartile"),alpha=0.8, colour="black") 
+print(PCA12)
+#ggsave(plot=PCA12,filename = "PCA_PCS_Quartiles_PC1_PC2.png", device = "png", type = "cairo", dpi=300, w=12, h=12)
+#pdf("PCA_PCS_Quartiles_PC1_PC2.pdf", w=12, h=12)
+#PCA12
+#dev.off()
+
+#PC1 vs PC2
+PCA12 <- ggplot(AitchinsonDF,aes_string(x="PC1",y="PC2",col="Mental_Component_Scale_quartile")) + geom_point(size=3,alpha=0.4)+
+  xlab(paste0("PC1, ",var_PC1,"% variance")) + 
+  ylab(paste0("PC2, ",var_PC2,"% variance"))+
+  theme_classic()+ 
+  theme(
+    axis.title.x = element_text(size=14, face="bold", colour = "black"),
+    axis.title.y = element_text(size=14, face="bold", colour = "black"),
+    axis.text.x = element_text(size=14, face="bold", colour = "black"),
+    axis.text.y = element_text(size=14, face="bold", colour = "black"))+
+  theme(legend.text = element_text(face = "bold", size=12),
+        legend.title = element_blank(),
+        plot.title=element_text(face = "bold",hjust=0.5))+
+  scale_color_manual(values = c("Q1"="#03045e", "Q2"="#ffb703", "Q3"="red", "Q4"="#3F612D"))
+ref <- reformulate("Mental_Component_Scale_quartile","cbind(PC1,PC2)")
+centroids <- aggregate(ref,AitchinsonDF,mean)
+PCA12 <- PCA12 + geom_point(data=centroids,shape=16,stroke=3,size=4,aes_string(x="PC1",y="PC2"),alpha=1) +
+  geom_point(data=centroids,shape=21,stroke=2,size=4,aes_string(x="PC1",y="PC2",col="Mental_Component_Scale_quartile"),alpha=0.8, colour="black") 
+print(PCA12)
+#ggsave(plot=PCA12,filename = "PCA_MCS_Quartiles_PC1_PC2.png", device = "png", type = "cairo", dpi=300, h=12, w=12)
+#pdf("PCA_MCS_Quartiles_PC1_PC2.pdf", h=12, w=12)
+#PCA12
+#dev.off()
+```
+```{r}
+#PERMANOVA----
+spDF <- spDF_CS_12M_CLR
+ADONIS_meta <- QoLMeta
+adonisVarsTouse <-   QoLMeta[
+                            c(
+                              #Questionairre items General
+                              "R_Physical_Functioning",
+                              "R_Social_Functioning",
+                              "R_Physical_Restrain",
+                              "R_Emotional_Restrain",
+                              "R_Mental_Health",
+                              "R_Vitality",
+                              "R_Pain",
+                              "R_General_Health_Attribution",
+                              "Physical_Component_Scale",
+                              "Mental_Component_Scale",
+                              #Physical
+                              "Max_HGT",
+                              "min_STST",
+                              "Min_TUG",
+                              "Min_4mWT",
+                              "FYSWLK2MDIST",
+                              "Physical_activity_score",
+                              "Clinical_Fr_Score",
+                              "Clinical_Fr_Score_3",
+                              #Mental
+                              "Antidepressant",
+                              "Severe_Fatigue",
+                              "major_depression",
+                              "anxiety",
+                              #Confounders
+                              "Age",
+                              "Sex",
+                              "BMI",
+                              "PPI",
+                              "Laxative",
+                              "Antibiotics",
+                              "Dialysis",
+                              "eGFR",
+                              "Diabetes",
+                              "Antihypertensive_treatment")]
+#ADONIS
+rownames(adonisVarsTouse) <- rownames(ADONIS_meta)
+# do univariate adonis
+adonis_meta <- matrix(ncol = 7, nrow=ncol(adonisVarsTouse))
+for (i in 1:ncol(adonisVarsTouse)){
+  varToUse <- colnames(adonisVarsTouse)[[i]]
+  print (paste(' >> grinding ',colnames(adonisVarsTouse)[[i]]))
+  # make new DF with selected phenotype and taxa 
+  tmpDF <- merge.data.frame(ADONIS_meta[,colnames(ADONIS_meta) %in% c("ID",varToUse)] ,
+                            spDF,by.x="ID",by.y = "row.names")
+  # get rid of ID (used only for merging)
+  tmpDF$ID <- NULL
+  # get rid of rows with NAs
+  print('debug, DF size before removing NAs:')
+  print(dim(tmpDF))
+  tmpDF <- tmpDF[complete.cases(tmpDF),]
+  print('debug, DF size after removing NAs:')
+  print(dim(tmpDF))
+  # calculate BC matrix
+  tmpDFforBC <- tmpDF
+  tmpDFforBC[[varToUse]] <- NULL
+  print('calculating Aitch matrix')
+  aitchMat <- vegdist(tmpDFforBC,method = "euclidean")
+  print(paste0('doing adonis for ',varToUse))
+  ad<-adonis(aitchMat ~ adonisVarsTouse[,i],permutations=99) #99 permutations for demonstration purposes
+  aov_table <- ad$aov.tab
+  #Df
+  adonis_meta[i,1]=aov_table[1,1]
+  #SumsOfSqs
+  adonis_meta[i,2]=aov_table[1,2]
+  #MeanSqs
+  adonis_meta[i,3]=aov_table[1,3]
+  #FModel
+  adonis_meta[i,4]=aov_table[1,4]
+  #R2
+  adonis_meta[i,5]=aov_table[1,5]
+  #Pval
+  adonis_meta[i,6]=aov_table[1,6]
+}
+adonis_meta= as.data.frame(adonis_meta)
+adonis_meta$V7=p.adjust(adonis_meta$V6, method = "BH")
+adonis_meta$V8="No"
+adonis_meta$V8[adonis_meta$V6<0.05]="Yes"
+adonis_meta$V9="No"
+adonis_meta$V9[adonis_meta$V7<0.05]="Yes"
+colnames(adonis_meta)=c("DF", "SumsOfSqs", "MeanSqs", "FModel","R2","pval","FDR(BH)","Significant_P", "Significant_P_FDR")
+rownames(adonis_meta) = colnames(adonisVarsTouse)
+#write.xlsx(adonis_meta,"ADONIS_Aitchison_Results.xlsx")
+```
+```{r}
+#Distance to general population controls----
+#Correlations
+CorrelationDF <- QoLMeta[c("DToHC",
+  "R_Physical_Functioning",
+  "R_Social_Functioning",
+  "R_Physical_Restrain",
+  "R_Emotional_Restrain",
+  "R_Mental_Health",
+  "R_Vitality",
+  "R_Pain",
+  "R_General_Health_Attribution",
+  "Physical_Component_Scale",
+  "Mental_Component_Scale")]
+CorrelationMatrix<-rcorr(as.matrix(CorrelationDF), type = "spearman")
+CorrelationMatrix$r  
+CorrelationMatrix$P
+
+#Physical component score
+pmain <- QoLMeta %>% 
+  drop_na(Physical_Component_Scale) %>% 
+  ggscatter(x = "Physical_Component_Scale", y = "DToHC",
+            add = "reg.line",  # Add regressin line
+            add.params = list(color = "black", fill = "lightgray"), # Customize reg. line
+            conf.int = TRUE,
+            color="#548DCB",
+            shape=16,
+            alpha=0.6)+
+  theme_classic()+
+  theme(
+    axis.title.x = element_text(size=14, face="bold", colour = "black"),
+    axis.title.y = element_text(size=14, face="bold", colour = "black"),
+    axis.text.x = element_text(size=14, face="bold", colour = "black"),
+    axis.text.y = element_text(size=14, face="bold", colour = "black"),
+    legend.position="none")+
+  stat_cor(method = "spearman", label.x = 1, label.y = 0.95)+
+  ylab("Distance to general population control")+
+  xlab("Physical component score")
+# Marginal densities along x axis
+xdens <- axis_canvas(pmain, axis = "x")+
+  geom_density(data = QoLMeta, aes(x = Physical_Component_Scale),
+               alpha = 0.7, size = 0.2, color="#548DCB", fill="#548DCB")+
+  ggpubr::fill_palette("jco")
+# Marginal densities along y axis
+# Need to set coord_flip = TRUE, if you plan to use coord_flip()
+ydens <- axis_canvas(pmain, axis = "y", coord_flip = TRUE)+
+  geom_density(data = QoLMeta, aes(x = DToHC),
+               alpha = 0.7, size = 0.2, color="#548DCB", fill="#548DCB")+
+  coord_flip()+
+  ggpubr::fill_palette("jco")
+p1 <- insert_xaxis_grob(pmain, xdens, grid::unit(.2, "null"), position = "top")
+PCS_DTHC <- insert_yaxis_grob(p1, ydens, grid::unit(.2, "null"), position = "right")
+ggdraw(PCS_DTHC)
+
+#Mental component score
+pmain <- QoLMeta %>% 
+  drop_na(Mental_Component_Scale) %>% 
+  ggscatter(x = "Mental_Component_Scale", y = "DToHC",
+            add = "reg.line",  # Add regressin line
+            add.params = list(color = "black", fill = "lightgray"), # Customize reg. line
+            conf.int = TRUE,
+            color="#548DCB",
+            shape=16,
+            alpha=0.6)+
+  theme_classic()+
+  theme(
+    axis.title.x = element_text(size=14, face="bold", colour = "black"),
+    axis.title.y = element_text(size=14, face="bold", colour = "black"),
+    axis.text.x = element_text(size=14, face="bold", colour = "black"),
+    axis.text.y = element_text(size=14, face="bold", colour = "black"),
+    legend.position="none")+
+  stat_cor(method = "spearman", label.x = 15, label.y = 0.95)+
+  ylab("Distance to general population control")+
+  xlab("Mental component score")
+# Marginal densities along x axis
+xdens <- axis_canvas(pmain, axis = "x")+
+  geom_density(data = QoLMeta, aes(x = Mental_Component_Scale),
+               alpha = 0.7, size = 0.2, color="#548DCB", fill="#548DCB")+
+  ggpubr::fill_palette("jco")
+# Marginal densities along y axis
+# Need to set coord_flip = TRUE, if you plan to use coord_flip()
+ydens <- axis_canvas(pmain, axis = "y", coord_flip = TRUE)+
+  geom_density(data = QoLMeta, aes(x = DToHC),
+               alpha = 0.7, size = 0.2, color="#548DCB", fill="#548DCB")+
+  coord_flip()+
+  ggpubr::fill_palette("jco")
+p1 <- insert_xaxis_grob(pmain, xdens, grid::unit(.2, "null"), position = "top")
+MCS_DTHC <- insert_yaxis_grob(p1, ydens, grid::unit(.2, "null"), position = "right")
+ggdraw(MCS_DTHC)
+
+```
